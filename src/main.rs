@@ -80,7 +80,6 @@ impl TaskFileHandler {
                 todo!();
             }
         };
-        println!("Creating file identifier with time: {}", ms_since_epoch);
         Self {
             queue_dir,
             cmd,
@@ -112,24 +111,21 @@ fn queue(task_cmd: String, task_args: Vec<String>, queue_dir: path::PathBuf, qui
     let child_fork = unsafe { unistd::fork() };
     match child_fork {
         Ok(unistd::ForkResult::Parent { child }) => {
-            println!("From parent process, new child pid: {}", child);
             // should end process when necessary setup is complete:
             // - child is backgrounded and ready for grandchild to start doing work
             let mut c: [u8; 1] = [0];
             unistd::close(pipe.1);
             // Will wait until grandchild process is ready
             unistd::read(pipe.0, &mut c);
-            println!("Exiting parent process");
             process::exit(0);
         }
         Ok(unistd::ForkResult::Child) => {
-            println!("This is the child process");
 
             unistd::close(pipe.0);
+
             let grandchild_fork = unsafe { unistd::fork() };
             match grandchild_fork {
                 Ok(unistd::ForkResult::Parent { child }) => {
-                    println!("This is the child process, new grandchild pid: {}", child);
                     let child_pid = child.as_raw();
                     if child_pid.is_negative() {
                         // How is this ever negative?
@@ -148,8 +144,6 @@ fn queue(task_cmd: String, task_args: Vec<String>, queue_dir: path::PathBuf, qui
 
                     let child_status = sys::wait::wait();
 
-                    // Grandchild process has changed status; remove this
-                    println!("Blahhhhh We should never see this");
 
                     let mut task_file = fs::OpenOptions::new()
                         .append(true)
@@ -218,9 +212,7 @@ fn queue(task_cmd: String, task_args: Vec<String>, queue_dir: path::PathBuf, qui
                     args_os.insert(0, cmd_os);
                     let args_c: Vec<ffi::CString> = args_os.iter().map(|arg| ffi::CString::new(arg.as_os_str().as_bytes()).unwrap()).collect();
 
-                    let arg_one = &cmd_c;
-                    let arg_two = &args_c;
-                    unistd::execvp(arg_one, arg_two).unwrap();
+                    unistd::execvp(&cmd_c, &args_c).unwrap();
                 }
                 Err(err) => {
                     todo!();
@@ -270,7 +262,6 @@ fn main() {
             println!("Watching until operations are done...");
         }
         ParseResult::Queue(task_cmd, task_args, quiet, cleanup) => {
-            println!("Going to run...{} {:?}", task_cmd, task_args);
             let dir_path = ensure_dir(&fnq_dir);
             queue(task_cmd, task_args, dir_path, quiet, cleanup); // How do we want to handle errors here?
         }
