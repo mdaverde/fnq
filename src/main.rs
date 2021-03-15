@@ -1,10 +1,8 @@
 use std::os::unix::prelude::*;
-use std::{env, fs, thread, time, path, io, process, ffi};
+use std::{env, fs, time, path, io, process, ffi};
 use nix::{unistd, sys, Error, fcntl};
 use nix::sys::wait::WaitStatus;
-use std::process::exit;
 use std::io::Write;
-use std::pin::Pin;
 use std::ffi::{OsString, OsStr};
 
 #[derive(Debug, PartialEq)]
@@ -12,10 +10,10 @@ enum ParseResult {
     Error,
     Test,
     Watch,
-    Queue(String, Vec<String>, bool, bool),
+    Queue(OsString, Vec<OsString>, bool, bool),
 }
 
-fn parse_args(mut args: Vec<String>) -> ParseResult {
+fn parse_args(mut args: Vec<OsString>) -> ParseResult {
     match args.len() {
         0 | 1 => {
             ParseResult::Error
@@ -41,7 +39,7 @@ fn parse_args(mut args: Vec<String>) -> ParseResult {
             }
 
             if let Some(index) = cmd_index {
-                let task_cmd = args.drain(index..index + 1).collect();
+                let task_cmd = args.drain(index..index + 1).next().unwrap();
                 let task_args = args.drain(index..).collect();
                 return ParseResult::Queue(task_cmd, task_args, quiet, clean_up);
             }
@@ -58,8 +56,8 @@ fn print_usage() {
 
 struct TaskFileHandler {
     queue_dir: path::PathBuf,
-    cmd: String,
-    args: Vec<String>,
+    cmd: OsString,
+    args: Vec<OsString>,
     time_id: String,
     pid: Option<u32>,
 }
@@ -69,7 +67,7 @@ impl TaskFileHandler {
         self.pid = Some(pid);
     }
 
-    fn new(queue_dir: path::PathBuf, cmd: String, args: Vec<String>) -> Self {
+    fn new(queue_dir: path::PathBuf, cmd: OsString, args: Vec<OsString>) -> Self {
         let now = time::SystemTime::now();
         let ms_since_epoch = match now.duration_since(time::UNIX_EPOCH) {
             Ok(duration) => {
@@ -105,7 +103,7 @@ impl TaskFileHandler {
     }
 }
 
-fn queue(task_cmd: String, task_args: Vec<String>, queue_dir: path::PathBuf, quiet: bool, cleanup: bool) -> Result<(), Error> {
+fn queue(task_cmd: OsString, task_args: Vec<OsString>, queue_dir: path::PathBuf, quiet: bool, cleanup: bool) -> Result<(), Error> {
     let mut task_handler = TaskFileHandler::new(queue_dir, task_cmd, task_args);
     let pipe = unistd::pipe()?;
     let child_fork = unsafe { unistd::fork() };
@@ -181,14 +179,15 @@ fn queue(task_cmd: String, task_args: Vec<String>, queue_dir: path::PathBuf, qui
                             .open(task_handler.to_path())
                             .unwrap_or_else(|error| {
                                 todo!();
-                                panic!();
                             });
 
                         let task_file_descriptor = task_file.as_raw_fd();
 
                         fcntl::flock(task_file_descriptor, fcntl::FlockArg::LockExclusive);
 
-                        writeln!(task_file, "exec {} {}", &task_handler.cmd, task_handler.args.join(" "));
+                        let cmd_str = task_handler.cmd.to_str().unwrap();
+                        let args_str: Vec<&str> = task_handler.args.iter().map(|arg| arg.to_str().unwrap()).collect();
+                        writeln!(task_file, "exec {} {}", cmd_str, args_str.join(" "));
 
                         // TODO: handle errors here
                         unistd::dup2(task_file_descriptor, io::stdout().as_raw_fd());
@@ -204,13 +203,9 @@ fn queue(task_cmd: String, task_args: Vec<String>, queue_dir: path::PathBuf, qui
 
                     unistd::setsid();
 
-                    let cmd_os: OsString = ffi::OsString::from(task_handler.cmd);
-                    let cmd_os_ref: &OsStr = cmd_os.as_ref();
-                    let cmd_c: ffi::CString = ffi::CString::new(cmd_os_ref.as_bytes()).unwrap();
-
-                    let mut args_os: Vec<OsString> = task_handler.args.iter().map(|arg| OsString::from(arg)).collect();
-                    args_os.insert(0, cmd_os);
-                    let args_c: Vec<ffi::CString> = args_os.iter().map(|arg| ffi::CString::new(arg.as_os_str().as_bytes()).unwrap()).collect();
+                    let cmd_c: ffi::CString = ffi::CString::new(task_handler.cmd.as_os_str().as_bytes()).unwrap();
+                    task_handler.args.insert(0, task_handler.cmd);
+                    let args_c: Vec<ffi::CString> = task_handler.args.iter().map(|arg| ffi::CString::new(arg.as_os_str().as_bytes()).unwrap()).collect();
 
                     unistd::execvp(&cmd_c, &args_c).unwrap();
                 }
@@ -247,7 +242,7 @@ fn ensure_dir(dir: &str) -> path::PathBuf {
 // -t & -w should allow a specific file to be awaited upon
 
 fn main() {
-    let args = env::args().collect();
+    let args = env::args_os().collect();
     // TODO: should use absolute directory?
     let fnq_dir = env::var("FNQ_DIR").unwrap_or(String::from("."));
     match parse_args(args) {
