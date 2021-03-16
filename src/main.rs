@@ -1,9 +1,9 @@
-use std::os::unix::prelude::*;
-use std::{env, fs, time, path, io, process, ffi};
-use nix::{unistd, sys, Error, fcntl};
 use nix::sys::wait::WaitStatus;
+use nix::{fcntl, sys, unistd, Error};
+use std::ffi::{OsStr, OsString};
 use std::io::Write;
-use std::ffi::{OsString, OsStr};
+use std::os::unix::prelude::*;
+use std::{env, ffi, fs, io, path, process, time};
 
 #[derive(Debug, PartialEq)]
 enum ParseResult {
@@ -15,9 +15,7 @@ enum ParseResult {
 
 fn parse_args(mut args: Vec<OsString>) -> ParseResult {
     match args.len() {
-        0 | 1 => {
-            ParseResult::Error
-        }
+        0 | 1 => ParseResult::Error,
         _ => {
             let mut cmd_index: Option<usize> = None;
             let mut quiet = false;
@@ -70,9 +68,7 @@ impl TaskFileHandler {
     fn new(queue_dir: path::PathBuf, cmd: OsString, args: Vec<OsString>) -> Self {
         let now = time::SystemTime::now();
         let ms_since_epoch = match now.duration_since(time::UNIX_EPOCH) {
-            Ok(duration) => {
-                duration.as_millis()
-            }
+            Ok(duration) => duration.as_millis(),
             Err(err) => {
                 // Should abort?
                 todo!();
@@ -103,7 +99,13 @@ impl TaskFileHandler {
     }
 }
 
-fn queue(task_cmd: OsString, task_args: Vec<OsString>, queue_dir: path::PathBuf, quiet: bool, cleanup: bool) -> Result<(), Error> {
+fn queue(
+    task_cmd: OsString,
+    task_args: Vec<OsString>,
+    queue_dir: path::PathBuf,
+    quiet: bool,
+    cleanup: bool,
+) -> Result<(), Error> {
     let mut task_handler = TaskFileHandler::new(queue_dir, task_cmd, task_args);
     let pipe = unistd::pipe()?;
     let child_fork = unsafe { unistd::fork() };
@@ -118,7 +120,6 @@ fn queue(task_cmd: OsString, task_args: Vec<OsString>, queue_dir: path::PathBuf,
             process::exit(0);
         }
         Ok(unistd::ForkResult::Child) => {
-
             unistd::close(pipe.0);
 
             let grandchild_fork = unsafe { unistd::fork() };
@@ -141,7 +142,6 @@ fn queue(task_cmd: OsString, task_args: Vec<OsString>, queue_dir: path::PathBuf,
                     unistd::close(pipe.1);
 
                     let child_status = sys::wait::wait();
-
 
                     let mut task_file = fs::OpenOptions::new()
                         .append(true)
@@ -171,7 +171,8 @@ fn queue(task_cmd: OsString, task_args: Vec<OsString>, queue_dir: path::PathBuf,
                     unistd::close(pipe.1);
                     task_handler.set_pid(process::id());
 
-                    { // Creates scope to guarantee file close/drop at end
+                    {
+                        // Creates scope to guarantee file close/drop at end
                         let mut task_file: fs::File = fs::OpenOptions::new()
                             .create_new(true)
                             .write(true)
@@ -186,7 +187,11 @@ fn queue(task_cmd: OsString, task_args: Vec<OsString>, queue_dir: path::PathBuf,
                         fcntl::flock(task_file_descriptor, fcntl::FlockArg::LockExclusive);
 
                         let cmd_str = task_handler.cmd.to_str().unwrap();
-                        let args_str: Vec<&str> = task_handler.args.iter().map(|arg| arg.to_str().unwrap()).collect();
+                        let args_str: Vec<&str> = task_handler
+                            .args
+                            .iter()
+                            .map(|arg| arg.to_str().unwrap())
+                            .collect();
                         writeln!(task_file, "exec {} {}", cmd_str, args_str.join(" "));
 
                         // TODO: handle errors here
@@ -203,9 +208,14 @@ fn queue(task_cmd: OsString, task_args: Vec<OsString>, queue_dir: path::PathBuf,
 
                     unistd::setsid();
 
-                    let cmd_c: ffi::CString = ffi::CString::new(task_handler.cmd.as_os_str().as_bytes()).unwrap();
+                    let cmd_c: ffi::CString =
+                        ffi::CString::new(task_handler.cmd.as_os_str().as_bytes()).unwrap();
                     task_handler.args.insert(0, task_handler.cmd);
-                    let args_c: Vec<ffi::CString> = task_handler.args.iter().map(|arg| ffi::CString::new(arg.as_os_str().as_bytes()).unwrap()).collect();
+                    let args_c: Vec<ffi::CString> = task_handler
+                        .args
+                        .iter()
+                        .map(|arg| ffi::CString::new(arg.as_os_str().as_bytes()).unwrap())
+                        .collect();
 
                     unistd::execvp(&cmd_c, &args_c).unwrap();
                 }
@@ -221,17 +231,16 @@ fn queue(task_cmd: OsString, task_args: Vec<OsString>, queue_dir: path::PathBuf,
     }
 }
 
-fn ensure_dir(dir: &str) -> path::PathBuf {
+fn ensure_dir(dir: &OsStr) -> path::PathBuf {
     let dir_path = path::PathBuf::from(dir);
     if !dir_path.exists() {
         fs::create_dir(&dir_path).unwrap();
-        // TODO: change to correct permissions: 0777
+    // TODO: change to correct permissions: 0777
     } else if !dir_path.is_dir() {
         panic!("$FNQ_DIR is not a directory");
     }
     dir_path
 }
-
 
 // Flags
 // -q / --quiet = no output to stdout
@@ -244,7 +253,7 @@ fn ensure_dir(dir: &str) -> path::PathBuf {
 fn main() {
     let args = env::args_os().collect();
     // TODO: should use absolute directory?
-    let fnq_dir = env::var("FNQ_DIR").unwrap_or(String::from("."));
+    let fnq_dir = env::var_os("FNQ_DIR").unwrap_or(OsString::from("."));
     match parse_args(args) {
         ParseResult::Error => {
             print_usage();
@@ -269,43 +278,96 @@ mod tests {
 
     #[test]
     fn test_parse_args() {
-        let mut args: Vec<String> = vec![];
+        let mut args: Vec<OsString> = vec![];
         assert_eq!(parse_args(args), ParseResult::Error);
 
-        args = vec![String::from("fnq")];
+        args = vec![OsString::from("fnq")];
         assert_eq!(parse_args(args), ParseResult::Error);
 
-        args = vec![String::from("fnq"), String::from("--test")];
+        args = vec![OsString::from("fnq"), OsString::from("--test")];
         assert_eq!(parse_args(args), ParseResult::Test);
 
-        args = vec![String::from("fnq"), String::from("--watch")];
+        args = vec![OsString::from("fnq"), OsString::from("--watch")];
         assert_eq!(parse_args(args), ParseResult::Watch);
 
-        args = vec![String::from("fnq"), String::from("--watch"), String::from("extra")];
+        args = vec![
+            OsString::from("fnq"),
+            OsString::from("--watch"),
+            OsString::from("extra"),
+        ];
         assert_eq!(parse_args(args), ParseResult::Watch);
 
-        args = vec![String::from("fnq"), String::from("--quiet")];
+        args = vec![OsString::from("fnq"), OsString::from("--quiet")];
         assert_eq!(parse_args(args), ParseResult::Error);
 
-        args = vec![String::from("fnq"), String::from("--cleanup")];
+        args = vec![OsString::from("fnq"), OsString::from("--cleanup")];
         assert_eq!(parse_args(args), ParseResult::Error);
 
-        args = vec![String::from("fnq"), String::from("--quiet"), String::from("sleep 2")];
-        assert_eq!(parse_args(args), ParseResult::Queue(String::from("sleep"), vec!(String::from("2")), true, false));
+        args = vec![
+            OsString::from("fnq"),
+            OsString::from("--quiet"),
+            OsString::from("sleep"),
+            OsString::from("2"),
+        ];
+        assert_eq!(
+            parse_args(args),
+            ParseResult::Queue(OsString::from("sleep"), vec!(OsString::from("2")), true, false)
+        );
 
-        args = vec![String::from("fnq"), String::from("--cleanup"), String::from("sleep 2")];
-        assert_eq!(parse_args(args), ParseResult::Queue(String::from("sleep 2"), vec!(String::from("2")), false, true));
+        args = vec![
+            OsString::from("fnq"),
+            OsString::from("--cleanup"),
+            OsString::from("sleep"),
+            OsString::from("2"),
+        ];
 
-        args = vec![String::from("fnq"), String::from("--cleanup"), String::from("--quiet"), String::from("sleep 2")];
-        assert_eq!(parse_args(args), ParseResult::Queue(String::from("sleep 2"), vec!(String::from("2")), true, true));
+        assert_eq!(
+            parse_args(args),
+            ParseResult::Queue(
+                OsString::from("sleep"),
+                vec!(OsString::from("2")),
+                false,
+                true
+            )
+        );
 
-        args = vec![String::from("fnq"), String::from("sleep 2")];
-        assert_eq!(parse_args(args), ParseResult::Queue(String::from("sleep 2"), vec!(String::from("2")), false, false));
+        args = vec![
+            OsString::from("fnq"),
+            OsString::from("--cleanup"),
+            OsString::from("--quiet"),
+            OsString::from("sleep"),
+            OsString::from("2"),
+        ];
+        assert_eq!(
+            parse_args(args),
+            ParseResult::Queue(OsString::from("sleep"), vec!(OsString::from("2")), true, true)
+        );
 
-        args = vec![String::from("fnq"), String::from("sleep 2"), String::from("&&"), String::from("echo hello")];
-        assert_eq!(parse_args(args), ParseResult::Queue(String::from("sleep 2 && echo hello"), vec!(String::from("2")), false, false));
+        args = vec![OsString::from("fnq"), OsString::from("sleep")];
+        assert_eq!(
+            parse_args(args),
+            ParseResult::Queue(
+                OsString::from("sleep"),
+                vec!(),
+                false,
+                false
+            )
+        );
+
+        args = vec![
+            OsString::from("fnq"),
+            OsString::from("sleep 2"),
+            OsString::from("&&"),
+            OsString::from("echo hello"),
+        ];
+        assert_eq!(
+            parse_args(args),
+            ParseResult::Queue(
+                OsString::from("sleep 2 && echo hello"),
+                vec!(OsString::from("2")),
+                false,
+                false
+            )
+        );
     }
 }
-
-
-
