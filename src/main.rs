@@ -171,42 +171,39 @@ fn queue(
                     unistd::close(pipe.1);
                     task_handler.set_pid(process::id());
 
-                    {
-                        // Creates scope to guarantee file close/drop at end
-                        let mut task_file: fs::File = fs::OpenOptions::new()
-                            .create_new(true)
-                            .write(true)
-                            .mode(0o600)
-                            .open(task_handler.to_path())
-                            .unwrap_or_else(|error| {
-                                todo!();
-                            });
+                    // Creates scope to guarantee file close/drop at end
+                    let mut task_file: fs::File = fs::OpenOptions::new()
+                        .create_new(true)
+                        .write(true)
+                        .mode(0o600)
+                        .open(task_handler.to_path())
+                        .unwrap_or_else(|error| {
+                            todo!();
+                        });
 
-                        let task_file_descriptor = task_file.as_raw_fd();
+                    let task_file_descriptor = task_file.as_raw_fd();
 
-                        fcntl::flock(task_file_descriptor, fcntl::FlockArg::LockExclusive);
+                    fcntl::flock(task_file_descriptor, fcntl::FlockArg::LockExclusive);
 
-                        let cmd_str = task_handler.cmd.to_str().unwrap();
-                        let args_str: Vec<&str> = task_handler
-                            .args
-                            .iter()
-                            .map(|arg| arg.to_str().unwrap())
-                            .collect();
-                        writeln!(task_file, "exec {} {}", cmd_str, args_str.join(" "));
+                    let cmd_str = task_handler.cmd.to_str().unwrap();
+                    let args_str: Vec<&str> = task_handler
+                        .args
+                        .iter()
+                        .map(|arg| arg.to_str().unwrap())
+                        .collect();
+                    writeln!(task_file, "exec {} {}", cmd_str, args_str.join(" "));
 
-                        // TODO: handle errors here
-                        unistd::dup2(task_file_descriptor, io::stdout().as_raw_fd());
-                        unistd::dup2(task_file_descriptor, io::stderr().as_raw_fd());
+                    unistd::dup2(task_file_descriptor, io::stdout().as_raw_fd());
+                    unistd::dup2(task_file_descriptor, io::stderr().as_raw_fd());
 
-                        // TODO: handle waiting based on other files here
+                    // Wait for files to flock (LOCK_EX) for here
+                    read_
 
-                        // Actually run command
-                        writeln!(task_file, "");
 
-                        task_file.set_permissions(fs::Permissions::from_mode(0o700));
-                    }
+                    writeln!(task_file, "");
 
-                    unistd::setsid();
+                    task_file.set_permissions(fs::Permissions::from_mode(0o700));
+
 
                     let cmd_c: ffi::CString =
                         ffi::CString::new(task_handler.cmd.as_os_str().as_bytes()).unwrap();
@@ -217,6 +214,7 @@ fn queue(
                         .map(|arg| ffi::CString::new(arg.as_os_str().as_bytes()).unwrap())
                         .collect();
 
+                    unistd::setsid();
                     unistd::execvp(&cmd_c, &args_c).unwrap();
                 }
                 Err(err) => {
@@ -235,7 +233,7 @@ fn ensure_dir(dir: &OsStr) -> path::PathBuf {
     let dir_path = path::PathBuf::from(dir);
     if !dir_path.exists() {
         fs::create_dir(&dir_path).unwrap();
-    // TODO: change to correct permissions: 0777
+        // TODO: change to correct permissions: 0777
     } else if !dir_path.is_dir() {
         panic!("$FNQ_DIR is not a directory");
     }
@@ -327,7 +325,7 @@ mod tests {
                 OsString::from("sleep"),
                 vec!(OsString::from("2")),
                 false,
-                true
+                true,
             )
         );
 
@@ -350,7 +348,7 @@ mod tests {
                 OsString::from("sleep"),
                 vec!(),
                 false,
-                false
+                false,
             )
         );
 
@@ -366,7 +364,7 @@ mod tests {
                 OsString::from("sleep 2 && echo hello"),
                 vec!(OsString::from("2")),
                 false,
-                false
+                false,
             )
         );
     }
