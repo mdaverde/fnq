@@ -3,7 +3,6 @@ use std::{env, ffi, fs, path};
 mod parser;
 mod queue;
 
-use parser::ParseResult;
 
 fn print_usage() {
     let usage = "Wrong usage";
@@ -21,15 +20,9 @@ fn ensure_dir(dir: &ffi::OsStr) -> path::PathBuf {
     dir_path
 }
 
-// Flags
-// -q / --quiet = no output to stdout
-// -c / --cleanup = delete file after done
-// -t / --test = check if all operations are done; return exit code 1 if not
-// -w / --watch = wait until all operations are done (should have a verbose mode to log which operations are going on)
-// --kill-all = kill all currently queued up operations; also does clean up
-// -t & -w should allow a specific file to be awaited upon
-
 fn main() {
+    use parser::ParseResult;
+
     let args = env::args_os().collect();
     // TODO: should use absolute directory?
     let fnq_dir = env::var_os("FNQ_DIR").unwrap_or(ffi::OsString::from("."));
