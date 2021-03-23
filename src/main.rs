@@ -154,7 +154,6 @@ fn queue(
                         .unwrap();
                     task_file.set_permissions(fs::Permissions::from_mode(0o600));
 
-                    writeln!(task_file, "Time finished child command {:?}", SystemTime::now());
                     match child_status {
                         Err(err) => todo!(),
                         Ok(WaitStatus::Exited(_, exit_code)) => {
@@ -202,9 +201,6 @@ fn queue(
                     unistd::dup2(task_file_descriptor, io::stdout().as_raw_fd());
                     unistd::dup2(task_file_descriptor, io::stderr().as_raw_fd());
 
-                    println!("Time start queing search {:?}", SystemTime::now());
-                    // Wait for files to flock (LOCK_EX) for here
-
                     // TODO: Look into OsStrExt & OsStringExt for Unix
                     let file_path_prefix = format!("./{}", FNQ_TASKFILE_PREFIX);
 
@@ -235,10 +231,6 @@ fn queue(
                         file_a.metadata.created().unwrap().cmp(&meta_b_created)
                     });
 
-                    /// Print all files
-                    for taskfile in &queue_files {
-                        println!("{:?}", taskfile.filepath.as_os_str());
-                    }
 
                     for entry in &queue_files {
                         // println!("true {}", file_path.to_string_lossy());
@@ -279,7 +271,6 @@ fn queue(
                         .map(|arg| ffi::CString::new(arg.as_os_str().as_bytes()).unwrap())
                         .collect();
 
-                    println!("Time about to run command {:?}", SystemTime::now());
                     unistd::setsid();
                     unistd::execvp(&cmd_c, &args_c).unwrap();
                 }
