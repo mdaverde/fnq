@@ -1,8 +1,7 @@
 use std::{env, ffi, fs, path};
 
 mod parser;
-mod queue;
-
+mod cmd_ops;
 
 fn print_usage() {
     let usage = "Wrong usage";
@@ -39,7 +38,7 @@ fn main() {
         }
         ParseResult::Queue(task_cmd, task_args, quiet, cleanup) => {
             let dir_path = ensure_dir(&fnq_dir);
-            queue::queue(task_cmd, task_args, dir_path, quiet, cleanup); // How do we want to handle errors here?
+            cmd_ops::queue(task_cmd, task_args, dir_path, quiet, cleanup); // How do we want to handle errors here?
         }
     }
 }

@@ -23,7 +23,7 @@ pub fn parse_args(mut args: Vec<ffi::OsString>) -> ParseResult {
                     return ParseResult::Watch;
                 } else if arg == "--quiet" {
                     quiet = true;
-                } else if arg == "--cleanup" {
+                } else if arg == "--clean" {
                     clean_up = true;
                 } else {
                     cmd_index = Some(index + 1);

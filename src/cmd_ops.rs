@@ -3,7 +3,7 @@ use std::io::Write;
 use std::os::unix::prelude::*;
 use std::{ffi, fs, io, path, process, time};
 
-const FNQ_TASKFILE_PREFIX: &'static str = "fnq";
+const QUEUE_FILE_PREFIX: &'static str = "fnq";
 
 struct TaskFileHandler {
     pub queue_dir: path::PathBuf,
@@ -40,7 +40,7 @@ impl TaskFileHandler {
         match self.pid {
             None => todo!(),
             Some(pid) => {
-                format!("{}{}.{}", FNQ_TASKFILE_PREFIX, self.time_id, pid)
+                format!("{}{}.{}", QUEUE_FILE_PREFIX, self.time_id, pid)
             }
         }
     }
@@ -50,6 +50,45 @@ impl TaskFileHandler {
         file_path.push(self.filename());
         file_path
     }
+}
+
+struct QueueFile {
+    pub filepath: path::PathBuf,
+    pub metadata: fs::Metadata,
+}
+
+fn queue_files_sorted(queue_dir: &path::PathBuf, task_file: &path::PathBuf) -> Vec<QueueFile> {
+    // TODO: Look into OsStrExt & ffi::OsStringExt for Unix
+    let file_path_prefix = format!(
+        "{}/{}",
+        queue_dir.to_string_lossy(),
+        QUEUE_FILE_PREFIX
+    );
+    println!("{}", file_path_prefix);
+
+    let mut queue_files: Vec<QueueFile> =
+        fs::read_dir(queue_dir)
+            .unwrap()
+            .into_iter()
+            .map(|dir_entry| dir_entry.unwrap())
+            .filter(|dir_entry| {
+                let filepath = dir_entry.path();
+                return filepath.is_file()
+                    && !filepath.eq(task_file)
+                    && filepath.to_str().unwrap().starts_with(&file_path_prefix);
+            })
+            .map(|dir_entry| QueueFile {
+                filepath: dir_entry.path(),
+                metadata: dir_entry.metadata().unwrap(),
+            })
+            .collect();
+
+    queue_files.sort_by(|file_a, file_b| {
+        let meta_b_created = file_b.metadata.created().unwrap();
+        file_a.metadata.created().unwrap().cmp(&meta_b_created)
+    });
+
+    queue_files
 }
 
 pub fn queue(
@@ -124,12 +163,14 @@ pub fn queue(
                     unistd::close(pipe.1);
                     task_handler.set_pid(process::id());
 
+                    let task_file_path = task_handler.path();
+
                     // Creates scope to guarantee file close/drop at end
                     let mut task_file: fs::File = fs::OpenOptions::new()
                         .create_new(true)
                         .write(true)
                         .mode(0o600)
-                        .open(task_handler.path())
+                        .open(&task_file_path)
                         .unwrap_or_else(|error| {
                             todo!();
                         });
@@ -149,42 +190,7 @@ pub fn queue(
                     unistd::dup2(task_file_descriptor, io::stdout().as_raw_fd());
                     unistd::dup2(task_file_descriptor, io::stderr().as_raw_fd());
 
-                    // TODO: Look into OsStrExt & ffi::OsStringExt for Unix
-                    let file_path_prefix = format!(
-                        "{}/{}",
-                        task_handler.queue_dir.to_string_lossy(),
-                        FNQ_TASKFILE_PREFIX
-                    );
-                    println!("{}", file_path_prefix);
-
-                    struct PreviousTaskFile {
-                        pub filepath: path::PathBuf,
-                        pub metadata: fs::Metadata,
-                    }
-
-                    let mut queue_files: Vec<PreviousTaskFile> =
-                        fs::read_dir(&task_handler.queue_dir)
-                            .unwrap()
-                            .into_iter()
-                            .map(|dir_entry| dir_entry.unwrap())
-                            .filter(|dir_entry| {
-                                let filepath = dir_entry.path();
-                                return filepath.is_file()
-                                    && !filepath.eq(&task_handler.path())
-                                    && filepath.to_str().unwrap().starts_with(&file_path_prefix);
-                            })
-                            .map(|dir_entry| PreviousTaskFile {
-                                filepath: dir_entry.path(),
-                                metadata: dir_entry.metadata().unwrap(),
-                            })
-                            .collect();
-
-                    queue_files.sort_by(|file_a, file_b| {
-                        let meta_b_created = file_b.metadata.created().unwrap();
-                        file_a.metadata.created().unwrap().cmp(&meta_b_created)
-                    });
-
-                    for entry in &queue_files {
+                    for entry in queue_files_sorted(&task_handler.queue_dir, &task_file_path) {
                         // println!("true {}", file_path.to_string_lossy());
                         let opened_file: fs::File = fs::OpenOptions::new()
                             .read(true)
