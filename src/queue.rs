@@ -150,7 +150,11 @@ pub fn queue(
                     unistd::dup2(task_file_descriptor, io::stderr().as_raw_fd());
 
                     // TODO: Look into OsStrExt & ffi::OsStringExt for Unix
-                    let file_path_prefix = format!("{}/{}", task_handler.queue_dir.to_string_lossy(), FNQ_TASKFILE_PREFIX);
+                    let file_path_prefix = format!(
+                        "{}/{}",
+                        task_handler.queue_dir.to_string_lossy(),
+                        FNQ_TASKFILE_PREFIX
+                    );
                     println!("{}", file_path_prefix);
 
                     struct PreviousTaskFile {
