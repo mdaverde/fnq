@@ -70,7 +70,7 @@ mod tests {
         args = vec![ffi::OsString::from("fnq"), ffi::OsString::from("--quiet")];
         assert_eq!(parse_args(args), ParseResult::Error);
 
-        args = vec![ffi::OsString::from("fnq"), ffi::OsString::from("--cleanup")];
+        args = vec![ffi::OsString::from("fnq"), ffi::OsString::from("--clean")];
         assert_eq!(parse_args(args), ParseResult::Error);
 
         args = vec![
@@ -91,7 +91,7 @@ mod tests {
 
         args = vec![
             ffi::OsString::from("fnq"),
-            ffi::OsString::from("--cleanup"),
+            ffi::OsString::from("--clean"),
             ffi::OsString::from("sleep"),
             ffi::OsString::from("2"),
         ];
@@ -108,7 +108,7 @@ mod tests {
 
         args = vec![
             ffi::OsString::from("fnq"),
-            ffi::OsString::from("--cleanup"),
+            ffi::OsString::from("--clean"),
             ffi::OsString::from("--quiet"),
             ffi::OsString::from("sleep"),
             ffi::OsString::from("2"),
@@ -127,22 +127,6 @@ mod tests {
         assert_eq!(
             parse_args(args),
             ParseResult::Queue(ffi::OsString::from("sleep"), vec!(), false, false,)
-        );
-
-        args = vec![
-            ffi::OsString::from("fnq"),
-            ffi::OsString::from("sleep 2"),
-            ffi::OsString::from("&&"),
-            ffi::OsString::from("echo hello"),
-        ];
-        assert_eq!(
-            parse_args(args),
-            ParseResult::Queue(
-                ffi::OsString::from("sleep 2 && echo hello"),
-                vec!(ffi::OsString::from("2")),
-                false,
-                false,
-            )
         );
     }
 }
