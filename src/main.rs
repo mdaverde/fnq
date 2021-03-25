@@ -8,11 +8,11 @@ fn print_usage() {
     println!("{}", usage);
 }
 
-fn ensure_dir(dir: &ffi::OsStr) -> path::PathBuf {
-    let dir_path = path::PathBuf::from(dir);
+fn ensure_dir(dir: ffi::OsString) -> path::PathBuf {
+    let dir_path: path::PathBuf = dir.into();
     if !dir_path.exists() {
-        fs::create_dir(&dir_path).unwrap();
-        // TODO: change to correct permissions: 0777
+        // TODO: change to correct permissions? (0777)
+        fs::create_dir(&dir_path).expect(format!("Was unable to create dir {:?}", dir_path).as_str());
     } else if !dir_path.is_dir() {
         panic!("$FNQ_DIR is not a directory");
     }
@@ -37,7 +37,7 @@ fn main() {
             println!("Watching until operations are done...");
         }
         ParseResult::Queue(task_cmd, task_args, quiet, cleanup) => {
-            let dir_path = ensure_dir(&fnq_dir);
+            let dir_path = ensure_dir(fnq_dir);
             cmd_ops::queue(task_cmd, task_args, dir_path, quiet, cleanup); // How do we want to handle errors here?
         }
     }

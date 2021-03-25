@@ -3,6 +3,29 @@ use std::io::Write;
 use std::os::unix::prelude::*;
 use std::{ffi, fs, io, path, process, time};
 
+macro_rules! concat_os_strings {
+    ($($elem: expr),*) => {{
+        let mut os_string = ffi::OsString::new();
+        $(os_string.push($elem);)*
+        os_string
+    }};
+}
+
+fn os_string_starts_with(os_a: &ffi::OsStr, os_b: &ffi::OsStr) -> bool {
+    let bytes_a = os_a.as_bytes();
+    let bytes_b = os_b.as_bytes();
+    if bytes_b.len() > bytes_a.len() {
+        return false;
+    }
+    for (i, b) in bytes_a[..bytes_b.len()].iter().enumerate() {
+        if !bytes_b[i].eq(b) {
+            return false;
+        }
+    }
+
+    true
+}
+
 const QUEUE_FILE_PREFIX: &'static str = "fnq";
 
 struct TaskFileHandler {
@@ -36,11 +59,16 @@ impl TaskFileHandler {
         }
     }
 
-    fn filename(&self) -> String {
+    fn filename(&self) -> ffi::OsString {
         match self.pid {
             None => todo!(),
             Some(pid) => {
-                format!("{}{}.{}", QUEUE_FILE_PREFIX, self.time_id, pid)
+                concat_os_strings!(
+                    ffi::OsString::from(QUEUE_FILE_PREFIX),
+                    ffi::OsString::from(&self.time_id),
+                    ffi::OsString::from("."),
+                    ffi::OsString::from(pid.to_string())
+                )
             }
         }
     }
@@ -59,29 +87,27 @@ struct QueueFile {
 
 fn queue_files_sorted(queue_dir: &path::PathBuf, task_file: &path::PathBuf) -> Vec<QueueFile> {
     // TODO: Look into OsStrExt & ffi::OsStringExt for Unix
-    let file_path_prefix = format!(
-        "{}/{}",
-        queue_dir.to_string_lossy(),
-        QUEUE_FILE_PREFIX
+    let file_path_prefix = concat_os_strings!(
+        queue_dir,
+        ffi::OsString::from("/"),
+        ffi::OsString::from(QUEUE_FILE_PREFIX)
     );
-    println!("{}", file_path_prefix);
 
-    let mut queue_files: Vec<QueueFile> =
-        fs::read_dir(queue_dir)
-            .unwrap()
-            .into_iter()
-            .map(|dir_entry| dir_entry.unwrap())
-            .filter(|dir_entry| {
-                let filepath = dir_entry.path();
-                return filepath.is_file()
-                    && !filepath.eq(task_file)
-                    && filepath.to_str().unwrap().starts_with(&file_path_prefix);
-            })
-            .map(|dir_entry| QueueFile {
-                filepath: dir_entry.path(),
-                metadata: dir_entry.metadata().unwrap(),
-            })
-            .collect();
+    let mut queue_files: Vec<QueueFile> = fs::read_dir(queue_dir)
+        .unwrap()
+        .into_iter()
+        .map(|dir_entry| dir_entry.unwrap())
+        .filter(|dir_entry| {
+            let filepath = dir_entry.path();
+            return filepath.is_file()
+                && !filepath.eq(task_file)
+                && os_string_starts_with(filepath.as_os_str(), (&file_path_prefix).as_os_str());
+        })
+        .map(|dir_entry| QueueFile {
+            filepath: dir_entry.path(),
+            metadata: dir_entry.metadata().unwrap(),
+        })
+        .collect();
 
     queue_files.sort_by(|file_a, file_b| {
         let meta_b_created = file_b.metadata.created().unwrap();
@@ -123,9 +149,9 @@ pub fn queue(
                         todo!();
                     }
                     task_handler.set_pid(child_pid as u32);
-                    let task_filename: String = task_handler.filename();
+                    let task_filename = task_handler.filename();
                     if !quiet {
-                        println!("{}", task_filename)
+                        writeln!(io::stdout(), "{}", task_filename.to_string_lossy());
                     }
                     unistd::close(io::stdin().as_raw_fd());
                     unistd::close(io::stdout().as_raw_fd());
@@ -191,7 +217,6 @@ pub fn queue(
                     unistd::dup2(task_file_descriptor, io::stderr().as_raw_fd());
 
                     for entry in queue_files_sorted(&task_handler.queue_dir, &task_file_path) {
-                        // println!("true {}", file_path.to_string_lossy());
                         let opened_file: fs::File = fs::OpenOptions::new()
                             .read(true)
                             .write(true)
