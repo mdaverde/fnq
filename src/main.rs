@@ -36,9 +36,9 @@ fn main() {
         ParseResult::Watch => {
             println!("Watching until operations are done...");
         }
-        ParseResult::Queue(task_cmd, task_args, quiet, cleanup) => {
+        ParseResult::Queue(task_cmd, task_args, quiet, clean) => {
             let dir_path = ensure_dir(fnq_dir);
-            cmd_ops::queue(task_cmd, task_args, dir_path, quiet, cleanup); // How do we want to handle errors here?
+            cmd_ops::queue(task_cmd, task_args, dir_path, quiet, clean); // How do we want to handle errors here?
         }
     }
 }

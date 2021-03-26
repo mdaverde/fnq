@@ -122,8 +122,8 @@ pub fn queue(
     task_args: Vec<ffi::OsString>,
     queue_dir: path::PathBuf,
     quiet: bool,
-    cleanup: bool,
-) -> Result<(), nix::Error::Error> {
+    clean: bool,
+) -> Result<(), nix::Error> {
     let mut task_handler = TaskFileHandler::new(queue_dir, task_cmd, task_args);
     let pipe = unistd::pipe()?;
     let child_fork = unsafe { unistd::fork() };
@@ -171,7 +171,7 @@ pub fn queue(
                         Err(err) => todo!(),
                         Ok(sys::wait::WaitStatus::Exited(_, exit_code)) => {
                             writeln!(task_file, "[exited with status {}.]", exit_code);
-                            if cleanup && exit_code == 0 {
+                            if clean && exit_code == 0 {
                                 fs::remove_file(task_handler.path());
                             }
                         }
