@@ -1,1 +1,3 @@
-echo hello world
+sleep $2
+echo "Sleeping for $2; writing $1 to append.txt"
+echo $1 >> append.txt

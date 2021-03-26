@@ -230,7 +230,6 @@ pub fn queue(
                         if can_lock.is_err() {
                             if (errno::EWOULDBLOCK as i32) == errno::errno() {
                                 fcntl::flock(opened_file.as_raw_fd(), fcntl::FlockArg::LockShared);
-                            // should block
                             } else {
                                 println!("can not open {} {}", errno::errno(), errno::EWOULDBLOCK);
                                 unimplemented!();
