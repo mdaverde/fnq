@@ -85,7 +85,7 @@ struct QueueFile {
     pub metadata: fs::Metadata,
 }
 
-fn queue_files_sorted(queue_dir: &path::PathBuf, task_file: &path::PathBuf) -> Vec<QueueFile> {
+fn queue_files_sorted(queue_dir: &path::PathBuf) -> Vec<QueueFile> {
     // TODO: Look into OsStrExt & ffi::OsStringExt for Unix
     let file_path_prefix = concat_os_strings!(
         queue_dir,
@@ -100,7 +100,6 @@ fn queue_files_sorted(queue_dir: &path::PathBuf, task_file: &path::PathBuf) -> V
         .filter(|dir_entry| {
             let filepath = dir_entry.path();
             return filepath.is_file()
-                && !filepath.eq(task_file)
                 && os_string_starts_with(filepath.as_os_str(), (&file_path_prefix).as_os_str());
         })
         .map(|dir_entry| QueueFile {
@@ -115,6 +114,28 @@ fn queue_files_sorted(queue_dir: &path::PathBuf, task_file: &path::PathBuf) -> V
     });
 
     queue_files
+}
+
+pub fn queue_test(queue_dir: path::PathBuf) -> bool {
+    let queue_files = queue_files_sorted(&queue_dir);
+
+    for entry in queue_files {
+        let opened_file: fs::File = fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(&entry.filepath)
+            .unwrap();
+
+        let lockable = fcntl::flock(opened_file.as_raw_fd(), fcntl::FlockArg::LockSharedNonblock);
+
+        if lockable.is_err() {
+            return false;
+        }
+
+        // Remove process lock
+        unistd::close(opened_file.as_raw_fd());
+    }
+    true
 }
 
 pub fn queue(
@@ -216,7 +237,11 @@ pub fn queue(
                     unistd::dup2(task_file_descriptor, io::stdout().as_raw_fd());
                     unistd::dup2(task_file_descriptor, io::stderr().as_raw_fd());
 
-                    for entry in queue_files_sorted(&task_handler.queue_dir, &task_file_path) {
+                    for entry in queue_files_sorted(&task_handler.queue_dir) {
+                        if entry.filepath == task_file_path {
+                            // TODO: How do we test this?
+                            continue;
+                        }
                         let opened_file: fs::File = fs::OpenOptions::new()
                             .read(true)
                             .write(true)

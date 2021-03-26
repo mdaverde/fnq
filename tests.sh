@@ -9,5 +9,9 @@ APPEND_FILE="$(pwd)/append.txt"
 
 for i in {1..10}; do
   sleep_count=$((10 - i))
-  cargo --quiet run --quiet test_append "$i" "$sleep_count"
+  cargo --quiet run -- --clean --quiet test_append "$i" "$sleep_count"
 done
+
+
+cargo run --quiet -- --test
+echo $?
