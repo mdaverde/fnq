@@ -40,7 +40,7 @@ fn main() {
             }
         }
         ParseResult::Watch => {
-            println!("Watching until operations are done...");
+            cmd_ops::queue_wait(dir_path);
         }
         ParseResult::Queue(task_cmd, task_args, quiet, clean) => {
             cmd_ops::queue(task_cmd, task_args, dir_path, quiet, clean); // How do we want to handle errors here?

@@ -138,6 +138,30 @@ pub fn queue_test(queue_dir: path::PathBuf) -> bool {
     true
 }
 
+pub fn queue_wait(queue_dir: path::PathBuf) -> bool {
+    let queue_files = queue_files_sorted(&queue_dir);
+
+    for entry in queue_files {
+        let opened_file: fs::File = fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(&entry.filepath)
+            .unwrap();
+
+        let lockable = fcntl::flock(opened_file.as_raw_fd(), fcntl::FlockArg::LockSharedNonblock);
+
+        if lockable.is_err() {
+            if (errno::EWOULDBLOCK as i32) == errno::errno() {
+                fcntl::flock(opened_file.as_raw_fd(), fcntl::FlockArg::LockShared);
+            }
+        }
+
+        // Remove process lock
+        unistd::close(opened_file.as_raw_fd());
+    }
+    true
+}
+
 pub fn queue(
     task_cmd: ffi::OsString,
     task_args: Vec<ffi::OsString>,
@@ -248,11 +272,11 @@ pub fn queue(
                             .open(&entry.filepath)
                             .unwrap();
 
-                        let can_lock = fcntl::flock(
+                        let lockable = fcntl::flock(
                             opened_file.as_raw_fd(),
                             fcntl::FlockArg::LockSharedNonblock,
                         );
-                        if can_lock.is_err() {
+                        if lockable.is_err() {
                             if (errno::EWOULDBLOCK as i32) == errno::errno() {
                                 fcntl::flock(opened_file.as_raw_fd(), fcntl::FlockArg::LockShared);
                             } else {
