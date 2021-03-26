@@ -1,4 +1,4 @@
-use nix::{errno, fcntl, sys, unistd, Error};
+use nix::{errno, fcntl, sys, unistd};
 use std::io::Write;
 use std::os::unix::prelude::*;
 use std::{env, ffi, fs, io, panic, path, process, time};
@@ -123,7 +123,7 @@ pub fn queue(
     queue_dir: path::PathBuf,
     quiet: bool,
     cleanup: bool,
-) -> Result<(), Error> {
+) -> Result<(), nix::Error::Error> {
     let mut task_handler = TaskFileHandler::new(queue_dir, task_cmd, task_args);
     let pipe = unistd::pipe()?;
     let child_fork = unsafe { unistd::fork() };
@@ -254,7 +254,13 @@ pub fn queue(
                         .collect();
 
                     unistd::setsid().unwrap();
-                    unistd::execvp(&cmd_c, &args_c).unwrap();
+                    if let Err(err) = unistd::execvp(&cmd_c, &args_c) {
+                        if nix::Error::Sys(errno::Errno::ENOENT) == err {
+                            panic!("{:?}: Could not find {:?} in path", err, &cmd_c);
+                        } else {
+                            panic!("{:?}", err);
+                        }
+                    }
                 }
                 Err(err) => {
                     todo!();
