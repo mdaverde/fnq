@@ -32,18 +32,21 @@ fn main() {
             print_usage();
             panic!(); // Did not understand args
         }
-        ParseResult::Test => {
+        ParseResult::TestAll => {
             if cmd_ops::queue_test(dir_path) {
                 std::process::exit(0);
             } else {
                 std::process::exit(1);
             }
         }
-        ParseResult::Watch => {
+        ParseResult::WatchAll => {
             cmd_ops::queue_wait(dir_path);
         }
         ParseResult::Queue(task_cmd, task_args, quiet, clean) => {
             cmd_ops::queue(task_cmd, task_args, dir_path, quiet, clean); // How do we want to handle errors here?
+        }
+        _ => {
+            println!("other cmd")
         }
     }
 }
