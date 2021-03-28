@@ -24,7 +24,7 @@ pub fn parse_args(mut args: Vec<ffi::OsString>) -> ParseResult {
             ParseResult::TestSingle(args.drain(2..3).next().unwrap())
         } else {
             ParseResult::Error
-        }
+        };
     } else if arg == "--watch" {
         return if len == 2 {
             ParseResult::WatchAll
@@ -32,7 +32,7 @@ pub fn parse_args(mut args: Vec<ffi::OsString>) -> ParseResult {
             ParseResult::WatchSingle(args.drain(2..3).next().unwrap())
         } else {
             ParseResult::Error
-        }
+        };
     }
 
     let mut index: usize = 1;
@@ -40,15 +40,15 @@ pub fn parse_args(mut args: Vec<ffi::OsString>) -> ParseResult {
     let mut clean = false;
 
     for arg in &args[1..] {
-       if arg == "--quiet" {
-           quiet = true;
-           index += 1;
-       } else if arg == "--clean" {
-           clean = true;
-           index += 1;
-       } else {
-           break;
-       }
+        if arg == "--quiet" {
+            quiet = true;
+            index += 1;
+        } else if arg == "--clean" {
+            clean = true;
+            index += 1;
+        } else {
+            break;
+        }
     }
 
     if index < len {
@@ -69,82 +69,78 @@ mod tests {
         let mut args: Vec<ffi::OsString> = vec![];
         assert_eq!(parse_args(args), ParseResult::Error);
 
-        args = vec![ffi::OsString::from("fnq")];
+        args = vec!["fnq".into()];
         assert_eq!(parse_args(args), ParseResult::Error);
 
-        args = vec![ffi::OsString::from("fnq"), ffi::OsString::from("--test")];
+        args = vec!["fnq".into(), "--test".into()];
         assert_eq!(parse_args(args), ParseResult::TestAll);
 
-        args = vec![ffi::OsString::from("fnq"), ffi::OsString::from("--watch")];
+        args = vec!["fnq".into(), "--watch".into()];
         assert_eq!(parse_args(args), ParseResult::WatchAll);
 
-        args = vec![
-            ffi::OsString::from("fnq"),
-            ffi::OsString::from("--watch"),
-            ffi::OsString::from("some_random_file"),
-        ];
-        assert_eq!(parse_args(args), ParseResult::WatchSingle("some_random_file".into()));
+        args = vec!["fnq".into(), "--watch".into(), "some_random_file".into()];
+        assert_eq!(
+            parse_args(args),
+            ParseResult::WatchSingle("some_random_file".into())
+        );
 
-        args = vec![ffi::OsString::from("fnq"), ffi::OsString::from("--quiet")];
+        args = vec!["fnq".into(), "--quiet".into()];
         assert_eq!(parse_args(args), ParseResult::Error);
 
-        args = vec![ffi::OsString::from("fnq"), ffi::OsString::from("--clean")];
+        args = vec!["fnq".into(), "--clean".into()];
         assert_eq!(parse_args(args), ParseResult::Error);
 
-        args = vec![
-            ffi::OsString::from("fnq"),
-            ffi::OsString::from("--quiet"),
-            ffi::OsString::from("sleep"),
-            ffi::OsString::from("2"),
-        ];
+        args = vec!["fnq".into(), "--quiet".into(), "sleep".into(), "2".into()];
         assert_eq!(
             parse_args(args),
-            ParseResult::Queue(
-                ffi::OsString::from("sleep"),
-                vec!(ffi::OsString::from("2")),
-                true,
-                false
-            )
+            ParseResult::Queue("sleep".into(), vec!("2".into()), true, false)
+        );
+
+        args = vec!["fnq".into(), "--clean".into(), "sleep".into(), "2".into()];
+
+        assert_eq!(
+            parse_args(args),
+            ParseResult::Queue("sleep".into(), vec!("2".into()), false, true,)
         );
 
         args = vec![
-            ffi::OsString::from("fnq"),
-            ffi::OsString::from("--clean"),
-            ffi::OsString::from("sleep"),
-            ffi::OsString::from("2"),
+            "fnq".into(),
+            "--clean".into(),
+            "--quiet".into(),
+            "sleep".into(),
+            "2".into(),
         ];
-
         assert_eq!(
             parse_args(args),
-            ParseResult::Queue(
-                ffi::OsString::from("sleep"),
-                vec!(ffi::OsString::from("2")),
-                false,
-                true,
-            )
+            ParseResult::Queue("sleep".into(), vec!("2".into()), true, true)
         );
+
+        args = vec!["fnq".into(), "sleep".into()];
+        assert_eq!(
+            parse_args(args),
+            ParseResult::Queue("sleep".into(), vec!(), false, false,)
+        );
+
+        args = vec!["fnq".into(), "--test".into()];
+        assert_eq!(parse_args(args), ParseResult::TestAll);
 
         args = vec![
-            ffi::OsString::from("fnq"),
-            ffi::OsString::from("--clean"),
-            ffi::OsString::from("--quiet"),
-            ffi::OsString::from("sleep"),
-            ffi::OsString::from("2"),
+            "fnq".into(),
+            "--test".into(),
+            ffi::OsString::from("queue_file.pid"),
         ];
         assert_eq!(
             parse_args(args),
-            ParseResult::Queue(
-                ffi::OsString::from("sleep"),
-                vec!(ffi::OsString::from("2")),
-                true,
-                true
-            )
+            ParseResult::TestSingle("queue_file.pid".into())
         );
 
-        args = vec![ffi::OsString::from("fnq"), ffi::OsString::from("sleep")];
+        args = vec!["fnq".into(), "--watch".into()];
+        assert_eq!(parse_args(args), ParseResult::WatchAll);
+
+        args = vec!["fnq".into(), "--watch".into(), "queue_file.pid".into()];
         assert_eq!(
             parse_args(args),
-            ParseResult::Queue(ffi::OsString::from("sleep"), vec!(), false, false,)
+            ParseResult::WatchSingle("queue_file.pid".into())
         );
     }
 }
