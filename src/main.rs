@@ -33,10 +33,13 @@ fn main() {
             panic!(); // Did not understand args
         }
         ParseResult::TestAll => {
-            if cmd_ops::queue_test(dir_path) {
-                std::process::exit(0);
-            } else {
-                std::process::exit(1);
+            if let Err(e) = cmd_ops::queue_test(dir_path).map(|is_queue_ready| {
+                match is_queue_ready {
+                    true => std::process::exit(0),
+                    false => std::process::exit(1)
+                }
+            }) {
+                eprintln!("Error occurred checking queue files {:?}", e);
             }
         }
         ParseResult::WatchAll => {

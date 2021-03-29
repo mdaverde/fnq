@@ -1,7 +1,7 @@
 use nix::{errno, fcntl, sys, unistd};
 use std::io::Write;
 use std::os::unix::prelude::*;
-use std::{env, ffi, fs, io, panic, path, process, time};
+use std::{env, error, ffi, fs, io, panic, path, process, time};
 
 macro_rules! concat_os_strings {
     ($($elem: expr),*) => {{
@@ -27,6 +27,10 @@ fn os_string_starts_with(os_a: &ffi::OsStr, os_b: &ffi::OsStr) -> bool {
 }
 
 const QUEUE_FILE_PREFIX: &'static str = "fnq";
+
+enum CmdOpsError {
+    CouldNotReadQueueDir(io::Error),
+}
 
 struct TaskFileHandler {
     pub queue_dir: path::PathBuf,
@@ -81,85 +85,85 @@ impl TaskFileHandler {
 }
 
 struct QueueFile {
-    pub filepath: path::PathBuf,
-    pub metadata: fs::Metadata,
+    filepath: path::PathBuf,
+    created: time::SystemTime,
 }
 
-fn queue_files_sorted(queue_dir: &path::PathBuf) -> Vec<QueueFile> {
-    // TODO: Look into OsStrExt & ffi::OsStringExt for Unix
+fn queue_files_sorted(queue_dir: &path::PathBuf) -> Result<Vec<QueueFile>, io::Error> {
     let file_path_prefix = concat_os_strings!(
         queue_dir,
         ffi::OsString::from("/"),
         ffi::OsString::from(QUEUE_FILE_PREFIX)
     );
 
-    let mut queue_files: Vec<QueueFile> = fs::read_dir(queue_dir)
-        .unwrap()
+    let mut queue_files = fs::read_dir(queue_dir)?
         .into_iter()
-        .map(|dir_entry| dir_entry.unwrap())
         .filter(|dir_entry| {
-            let filepath = dir_entry.path();
-            return filepath.is_file()
-                && os_string_starts_with(filepath.as_os_str(), (&file_path_prefix).as_os_str());
+            if let Ok(dir_entry) = dir_entry {
+                let filepath = dir_entry.path();
+                return filepath.is_file()
+                    && os_string_starts_with(
+                        filepath.as_os_str(),
+                        (&file_path_prefix).as_os_str(),
+                    );
+            }
+            return false;
         })
-        .map(|dir_entry| QueueFile {
-            filepath: dir_entry.path(),
-            metadata: dir_entry.metadata().unwrap(),
+        .map(|dir_entry| {
+            dir_entry.and_then(|dir_entry| {
+                Ok(QueueFile {
+                    filepath: dir_entry.path(),
+                    created: dir_entry.metadata()?.created()?,
+                })
+            })
         })
-        .collect();
+        .collect::<Result<Vec<QueueFile>, _>>()?;
 
-    queue_files.sort_by(|file_a, file_b| {
-        let meta_b_created = file_b.metadata.created().unwrap();
-        file_a.metadata.created().unwrap().cmp(&meta_b_created)
-    });
+    queue_files.sort_by(|file_a, file_b| file_a.created.cmp(&file_b.created));
 
-    queue_files
+    Ok(queue_files)
 }
 
-pub fn queue_test(queue_dir: path::PathBuf) -> bool {
-    let queue_files = queue_files_sorted(&queue_dir);
+pub fn queue_test(queue_dir: path::PathBuf) -> Result<bool, Box<dyn error::Error>> {
+    let queue_files = queue_files_sorted(&queue_dir)?;
 
     for entry in queue_files {
         let opened_file: fs::File = fs::OpenOptions::new()
             .read(true)
             .write(true)
-            .open(&entry.filepath)
-            .unwrap();
+            .open(&entry.filepath)?;
 
-        let lockable = fcntl::flock(opened_file.as_raw_fd(), fcntl::FlockArg::LockSharedNonblock);
-
-        if lockable.is_err() {
-            return false;
+        if fcntl::flock(opened_file.as_raw_fd(), fcntl::FlockArg::LockSharedNonblock).is_err() {
+            return Ok(false);
         }
 
         // Remove process lock
-        unistd::close(opened_file.as_raw_fd());
+        unistd::close(opened_file.as_raw_fd())?;
     }
-    true
+
+    Ok(true)
 }
 
-pub fn queue_wait(queue_dir: path::PathBuf) -> bool {
-    let queue_files = queue_files_sorted(&queue_dir);
+pub fn queue_wait(queue_dir: path::PathBuf) -> Result<bool, Box<dyn error::Error>> {
+    let queue_files = queue_files_sorted(&queue_dir)?;
 
     for entry in queue_files {
         let opened_file: fs::File = fs::OpenOptions::new()
             .read(true)
             .write(true)
-            .open(&entry.filepath)
-            .unwrap();
+            .open(&entry.filepath)?;
 
-        let lockable = fcntl::flock(opened_file.as_raw_fd(), fcntl::FlockArg::LockSharedNonblock);
-
-        if lockable.is_err() {
+        if fcntl::flock(opened_file.as_raw_fd(), fcntl::FlockArg::LockSharedNonblock).is_err() {
             if (errno::EWOULDBLOCK as i32) == errno::errno() {
                 fcntl::flock(opened_file.as_raw_fd(), fcntl::FlockArg::LockShared);
             }
         }
 
         // Remove process lock
-        unistd::close(opened_file.as_raw_fd());
+        unistd::close(opened_file.as_raw_fd())?;
     }
-    true
+
+    Ok(true)
 }
 
 pub fn queue(
@@ -242,9 +246,8 @@ pub fn queue(
                         .write(true)
                         .mode(0o600)
                         .open(&task_file_path)
-                        .unwrap_or_else(|error| {
-                            todo!();
-                        });
+                        .unwrap();
+                    // .expect(format!("Could not create task's queue file at {:?}", &task_file_path).as_str());
 
                     let task_file_descriptor = task_file.as_raw_fd();
 
@@ -261,7 +264,7 @@ pub fn queue(
                     unistd::dup2(task_file_descriptor, io::stdout().as_raw_fd());
                     unistd::dup2(task_file_descriptor, io::stderr().as_raw_fd());
 
-                    for entry in queue_files_sorted(&task_handler.queue_dir) {
+                    for entry in queue_files_sorted(&task_handler.queue_dir).unwrap() {
                         if entry.filepath == task_file_path {
                             // TODO: How do we test this?
                             continue;
