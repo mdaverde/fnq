@@ -1,6 +1,6 @@
 use std::{env, ffi, fs, path, process};
 
-mod cmd_ops;
+mod ops;
 mod parser;
 
 fn print_usage() {
@@ -33,19 +33,19 @@ fn main() {
             panic!(); // Did not understand args
         }
         ParseResult::TapAll => {
-            if let Err(err) = cmd_ops::tap(dir_path)
+            if let Err(err) = ops::tap(dir_path)
                 .map(|is_queue_ready| process::exit(if is_queue_ready { 0 } else { 1 }))
             {
                 eprintln!("Queue test error {:?}", err);
             }
         }
         ParseResult::WaitAll => {
-            if let Err(err) = cmd_ops::wait(dir_path) {
+            if let Err(err) = ops::wait(dir_path) {
                 eprintln!("Queue watch error {:?}", err);
             }
         }
         ParseResult::Queue(task_cmd, task_args, quiet, clean) => {
-            if let Err(err) = cmd_ops::queue(task_cmd, task_args, dir_path, quiet, clean) {
+            if let Err(err) = ops::queue(task_cmd, task_args, dir_path, quiet, clean) {
                 // Note: possibly could be another process in which this writes to a different stdout
                 eprintln!("Queue error: {:?}", err)
             }

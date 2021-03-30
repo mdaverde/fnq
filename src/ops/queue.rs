@@ -4,7 +4,7 @@ use std::{error, ffi, fs, io, path, process, time};
 
 use nix::{errno, fcntl, sys, unistd};
 
-use crate::cmd_ops::{files, QUEUE_FILE_PREFIX};
+use crate::ops::{files, QUEUE_FILE_PREFIX};
 
 struct TaskFileHandler {
     pub queue_dir: path::PathBuf,

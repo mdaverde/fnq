@@ -1,7 +1,7 @@
 use std::{ffi, fs, io, path, time};
 
-use crate::cmd_ops::os_strings::OsStringStartsWithExt;
-use crate::cmd_ops::QUEUE_FILE_PREFIX;
+use crate::ops::os_strings::OsStringStartsWithExt;
+use crate::ops::QUEUE_FILE_PREFIX;
 
 pub struct QueueEntry {
     pub filepath: path::PathBuf,
