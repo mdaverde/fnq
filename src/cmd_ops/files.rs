@@ -1,6 +1,7 @@
 use std::{ffi, fs, io, path, time};
 
-use crate::cmd_ops::{os_strings, QUEUE_FILE_PREFIX};
+use crate::cmd_ops::os_strings::OsStringStartsWithExt;
+use crate::cmd_ops::QUEUE_FILE_PREFIX;
 
 pub struct QueueEntry {
     pub filepath: path::PathBuf,
@@ -20,10 +21,9 @@ pub fn files(queue_dir: &path::PathBuf) -> Result<Vec<QueueEntry>, io::Error> {
             if let Ok(dir_entry) = dir_entry {
                 let filepath = dir_entry.path();
                 return filepath.is_file()
-                    && os_strings::os_string_starts_with(
-                        filepath.as_os_str(),
-                        (&file_path_prefix).as_os_str(),
-                    );
+                    && filepath
+                        .as_os_str()
+                        .starts_with(file_path_prefix.as_os_str());
             }
             return false;
         })
