@@ -90,20 +90,23 @@ pub fn queue(
                         writeln!(io::stdout(), "{}", task_filename.to_string_lossy())?;
                     }
 
-                    let mut task_file = fs::OpenOptions::new()
-                        .append(true)
-                        .open(task_handler.path()?)?;
-                    task_file.set_permissions(fs::Permissions::from_mode(0o600))?;
-
                     // Consider instead of closing these, sending this output to the task file instead
                     unistd::close(io::stdin().as_raw_fd())?;
                     unistd::close(io::stdout().as_raw_fd())?;
                     unistd::close(io::stderr().as_raw_fd())?;
 
-                    // Release initiating process
+                    // Initiating process complete; drop original process
                     unistd::close(pipe.1)?;
 
-                    match sys::wait::wait() {
+                    // Wait for child process to finish
+                    let child_status = sys::wait::wait();
+
+                    let mut task_file = fs::OpenOptions::new()
+                        .append(true)
+                        .open(task_handler.path()?)?;
+                    task_file.set_permissions(fs::Permissions::from_mode(0o600))?;
+
+                    match child_status {
                         Err(err) => {
                             // TODO: test this
                             writeln!(task_file, "[child process has errored out: {}.]", err).ok();
