@@ -16,7 +16,7 @@ pub fn wait(queue_dir: path::PathBuf) -> Result<bool, Box<dyn error::Error>> {
 
         if fcntl::flock(opened_file.as_raw_fd(), fcntl::FlockArg::LockSharedNonblock).is_err() {
             if (errno::EWOULDBLOCK as i32) == errno::errno() {
-                fcntl::flock(opened_file.as_raw_fd(), fcntl::FlockArg::LockShared);
+                fcntl::flock(opened_file.as_raw_fd(), fcntl::FlockArg::LockShared)?;
             }
         }
 

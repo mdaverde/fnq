@@ -1,9 +1,10 @@
-use nix::{errno, fcntl, sys, unistd};
 use std::io::Write;
 use std::os::unix::prelude::*;
 use std::{error, ffi, fs, io, path, process, time};
 
-use crate::cmd_ops::{os_strings, queue_files, QUEUE_FILE_PREFIX};
+use nix::{errno, fcntl, sys, unistd};
+
+use crate::cmd_ops::{queue_files, QUEUE_FILE_PREFIX};
 
 struct TaskFileHandler {
     pub queue_dir: path::PathBuf,
@@ -86,14 +87,15 @@ pub fn queue(
                     let task_filename = task_handler.filename()?;
 
                     if !quiet {
-                        writeln!(io::stdout(), "{}", task_filename.to_string_lossy());
+                        writeln!(io::stdout(), "{}", task_filename.to_string_lossy())?;
                     }
 
                     let mut task_file = fs::OpenOptions::new()
                         .append(true)
                         .open(task_handler.path()?)?;
-                    task_file.set_permissions(fs::Permissions::from_mode(0o600));
+                    task_file.set_permissions(fs::Permissions::from_mode(0o600))?;
 
+                    // Consider instead of closing these, sending this output to the task file instead
                     unistd::close(io::stdin().as_raw_fd())?;
                     unistd::close(io::stdout().as_raw_fd())?;
                     unistd::close(io::stderr().as_raw_fd())?;
@@ -129,7 +131,7 @@ pub fn queue(
                     }
                 }
                 unistd::ForkResult::Child => {
-                    unistd::close(pipe.1);
+                    unistd::close(pipe.1)?;
                     task_handler.set_pid(process::id());
 
                     let task_file_path = task_handler.path()?;
@@ -144,7 +146,7 @@ pub fn queue(
 
                     let task_file_descriptor = task_file.as_raw_fd();
 
-                    fcntl::flock(task_file_descriptor, fcntl::FlockArg::LockExclusive);
+                    fcntl::flock(task_file_descriptor, fcntl::FlockArg::LockExclusive)?;
 
                     let cmd_str = task_handler.cmd.to_str().unwrap();
                     let args_str: Vec<&str> = task_handler
@@ -152,10 +154,10 @@ pub fn queue(
                         .iter()
                         .map(|arg| arg.to_str().unwrap())
                         .collect();
-                    writeln!(task_file, "exec {} {}", cmd_str, args_str.join(" "));
+                    writeln!(task_file, "exec {} {}", cmd_str, args_str.join(" "))?;
 
-                    unistd::dup2(task_file_descriptor, io::stdout().as_raw_fd());
-                    unistd::dup2(task_file_descriptor, io::stderr().as_raw_fd());
+                    unistd::dup2(task_file_descriptor, io::stdout().as_raw_fd())?;
+                    unistd::dup2(task_file_descriptor, io::stderr().as_raw_fd())?;
 
                     for entry in queue_files::queue_files_sorted(&task_handler.queue_dir).unwrap() {
                         if entry.filepath == task_file_path {
@@ -174,7 +176,7 @@ pub fn queue(
                         );
                         if lockable.is_err() {
                             if (errno::EWOULDBLOCK as i32) == errno::errno() {
-                                fcntl::flock(opened_file.as_raw_fd(), fcntl::FlockArg::LockShared);
+                                fcntl::flock(opened_file.as_raw_fd(), fcntl::FlockArg::LockShared)?;
                             } else {
                                 println!("can not open {} {}", errno::errno(), errno::EWOULDBLOCK);
                                 unimplemented!();
@@ -182,12 +184,12 @@ pub fn queue(
                         }
 
                         // Remove process lock
-                        unistd::close(opened_file.as_raw_fd());
+                        unistd::close(opened_file.as_raw_fd())?;
                     }
 
-                    writeln!(task_file, "");
+                    writeln!(task_file, "")?;
 
-                    task_file.set_permissions(fs::Permissions::from_mode(0o700));
+                    task_file.set_permissions(fs::Permissions::from_mode(0o700))?;
 
                     let cmd_c: ffi::CString =
                         ffi::CString::new(task_handler.cmd.as_os_str().as_bytes()).unwrap();

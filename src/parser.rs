@@ -3,8 +3,8 @@ use std::ffi;
 #[derive(Debug, PartialEq)]
 pub enum ParseResult {
     Error,
-    TestAll,
-    TestSingle(ffi::OsString),
+    TapAll,
+    TapSingle(ffi::OsString),
     WatchAll,
     WatchSingle(ffi::OsString),
     Queue(ffi::OsString, Vec<ffi::OsString>, bool, bool),
@@ -17,11 +17,11 @@ pub fn parse_args(mut args: Vec<ffi::OsString>) -> ParseResult {
     }
 
     let arg = &args[1];
-    if arg == "--test" {
+    if arg == "--tap" {
         return if len == 2 {
-            ParseResult::TestAll
+            ParseResult::TapAll
         } else if len == 3 {
-            ParseResult::TestSingle(args.drain(2..3).next().unwrap())
+            ParseResult::TapSingle(args.drain(2..3).next().unwrap())
         } else {
             ParseResult::Error
         };
@@ -72,8 +72,8 @@ mod tests {
         args = vec!["fnq".into()];
         assert_eq!(parse_args(args), ParseResult::Error);
 
-        args = vec!["fnq".into(), "--test".into()];
-        assert_eq!(parse_args(args), ParseResult::TestAll);
+        args = vec!["fnq".into(), "--tap".into()];
+        assert_eq!(parse_args(args), ParseResult::TapAll);
 
         args = vec!["fnq".into(), "--watch".into()];
         assert_eq!(parse_args(args), ParseResult::WatchAll);
@@ -121,17 +121,17 @@ mod tests {
             ParseResult::Queue("sleep".into(), vec!(), false, false,)
         );
 
-        args = vec!["fnq".into(), "--test".into()];
-        assert_eq!(parse_args(args), ParseResult::TestAll);
+        args = vec!["fnq".into(), "--tap".into()];
+        assert_eq!(parse_args(args), ParseResult::TapAll);
 
         args = vec![
             "fnq".into(),
-            "--test".into(),
+            "--tap".into(),
             ffi::OsString::from("queue_file.pid"),
         ];
         assert_eq!(
             parse_args(args),
-            ParseResult::TestSingle("queue_file.pid".into())
+            ParseResult::TapSingle("queue_file.pid".into())
         );
 
         args = vec!["fnq".into(), "--watch".into()];

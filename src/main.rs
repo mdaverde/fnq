@@ -32,7 +32,7 @@ fn main() {
             print_usage();
             panic!(); // Did not understand args
         }
-        ParseResult::TestAll => {
+        ParseResult::TapAll => {
             if let Err(err) = cmd_ops::tap(dir_path)
                 .map(|is_queue_ready| process::exit(if is_queue_ready { 0 } else { 1 }))
             {
