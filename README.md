@@ -14,13 +14,13 @@ $ fnq [-quiet/-q | --cleanup] cmd
 
 #### `--clean / -c`
 
-#### `--watch / -w`
+#### `--wait / -w`
 
 Accepts a fnq output file to wait for 
 
-#### `--test / -t`
+#### `--tap / -t`
 
-Accepts a fnq output file to wait for
+Accepts a fnq output file to tap process status
 
 #### `--force-kill-all`
 

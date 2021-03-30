@@ -5,8 +5,8 @@ pub enum ParseResult {
     Error,
     TapAll,
     TapSingle(ffi::OsString),
-    WatchAll,
-    WatchSingle(ffi::OsString),
+    WaitAll,
+    WaitSingle(ffi::OsString),
     Queue(ffi::OsString, Vec<ffi::OsString>, bool, bool),
 }
 
@@ -25,11 +25,11 @@ pub fn parse_args(mut args: Vec<ffi::OsString>) -> ParseResult {
         } else {
             ParseResult::Error
         };
-    } else if arg == "--watch" {
+    } else if arg == "--wait" {
         return if len == 2 {
-            ParseResult::WatchAll
+            ParseResult::WaitAll
         } else if len == 3 {
-            ParseResult::WatchSingle(args.drain(2..3).next().unwrap())
+            ParseResult::WaitSingle(args.drain(2..3).next().unwrap())
         } else {
             ParseResult::Error
         };
@@ -75,13 +75,13 @@ mod tests {
         args = vec!["fnq".into(), "--tap".into()];
         assert_eq!(parse_args(args), ParseResult::TapAll);
 
-        args = vec!["fnq".into(), "--watch".into()];
-        assert_eq!(parse_args(args), ParseResult::WatchAll);
+        args = vec!["fnq".into(), "--wait".into()];
+        assert_eq!(parse_args(args), ParseResult::WaitAll);
 
-        args = vec!["fnq".into(), "--watch".into(), "some_random_file".into()];
+        args = vec!["fnq".into(), "--wait".into(), "some_random_file".into()];
         assert_eq!(
             parse_args(args),
-            ParseResult::WatchSingle("some_random_file".into())
+            ParseResult::WaitSingle("some_random_file".into())
         );
 
         args = vec!["fnq".into(), "--quiet".into()];
@@ -134,13 +134,13 @@ mod tests {
             ParseResult::TapSingle("queue_file.pid".into())
         );
 
-        args = vec!["fnq".into(), "--watch".into()];
-        assert_eq!(parse_args(args), ParseResult::WatchAll);
+        args = vec!["fnq".into(), "--wait".into()];
+        assert_eq!(parse_args(args), ParseResult::WaitAll);
 
-        args = vec!["fnq".into(), "--watch".into(), "queue_file.pid".into()];
+        args = vec!["fnq".into(), "--wait".into(), "queue_file.pid".into()];
         assert_eq!(
             parse_args(args),
-            ParseResult::WatchSingle("queue_file.pid".into())
+            ParseResult::WaitSingle("queue_file.pid".into())
         );
     }
 }

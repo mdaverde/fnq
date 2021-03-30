@@ -39,7 +39,7 @@ fn main() {
                 eprintln!("Queue test error {:?}", err);
             }
         }
-        ParseResult::WatchAll => {
+        ParseResult::WaitAll => {
             if let Err(err) = cmd_ops::wait(dir_path) {
                 eprintln!("Queue watch error {:?}", err);
             }

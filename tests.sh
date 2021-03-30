@@ -13,5 +13,5 @@ for i in {1..10}; do
 done
 
 
-cargo run --quiet -- --tap
+cargo run --quiet -- --wait
 echo $?
