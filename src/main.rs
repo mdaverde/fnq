@@ -1,4 +1,4 @@
-use std::{env, ffi, fs, path};
+use std::{env, ffi, fs, path, process};
 
 mod cmd_ops;
 mod parser;
@@ -33,20 +33,22 @@ fn main() {
             panic!(); // Did not understand args
         }
         ParseResult::TestAll => {
-            if let Err(e) = cmd_ops::queue_test(dir_path).map(|is_queue_ready| {
-                match is_queue_ready {
-                    true => std::process::exit(0),
-                    false => std::process::exit(1)
-                }
-            }) {
-                eprintln!("Error occurred checking queue files {:?}", e);
+            if let Err(err) = cmd_ops::queue_test(dir_path)
+                .map(|is_queue_ready| process::exit(if is_queue_ready { 0 } else { 1 }))
+            {
+                eprintln!("Queue test error {:?}", err);
             }
         }
         ParseResult::WatchAll => {
-            cmd_ops::queue_wait(dir_path);
+            if let Err(err) = cmd_ops::queue_wait(dir_path) {
+                eprintln!("Queue watch error {:?}", err);
+            }
         }
         ParseResult::Queue(task_cmd, task_args, quiet, clean) => {
-            cmd_ops::queue(task_cmd, task_args, dir_path, quiet, clean); // How do we want to handle errors here?
+            if let Err(err) = cmd_ops::queue(task_cmd, task_args, dir_path, quiet, clean) {
+                // Note: possibly could be another process in which this writes to a different stdout
+                eprintln!("Queue error: {:?}", err)
+            }
         }
         _ => {
             println!("other cmd")

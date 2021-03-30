@@ -28,10 +28,6 @@ fn os_string_starts_with(os_a: &ffi::OsStr, os_b: &ffi::OsStr) -> bool {
 
 const QUEUE_FILE_PREFIX: &'static str = "fnq";
 
-enum CmdOpsError {
-    CouldNotReadQueueDir(io::Error),
-}
-
 struct TaskFileHandler {
     pub queue_dir: path::PathBuf,
     cmd: ffi::OsString,
@@ -45,44 +41,52 @@ impl TaskFileHandler {
         self.pid = Some(pid);
     }
 
-    fn new(queue_dir: path::PathBuf, cmd: ffi::OsString, args: Vec<ffi::OsString>) -> Self {
-        let now = time::SystemTime::now();
-        let ms_since_epoch = match now.duration_since(time::UNIX_EPOCH) {
-            Ok(duration) => duration.as_millis(),
-            Err(err) => {
-                // Should abort?
-                todo!();
-            }
-        };
-        Self {
+    fn new(
+        queue_dir: path::PathBuf,
+        cmd: ffi::OsString,
+        args: Vec<ffi::OsString>,
+    ) -> Result<Self, time::SystemTimeError> {
+        let time_id = time::SystemTime::now()
+            .duration_since(time::UNIX_EPOCH)?
+            .as_millis()
+            .to_string();
+        Ok(Self {
             queue_dir,
             cmd,
             args,
-            time_id: ms_since_epoch.to_string(),
+            time_id,
             pid: None,
-        }
+        })
     }
 
-    fn filename(&self) -> ffi::OsString {
+    fn filename(&self) -> Result<ffi::OsString, String> {
         match self.pid {
-            None => todo!(),
-            Some(pid) => {
-                concat_os_strings!(
-                    ffi::OsString::from(QUEUE_FILE_PREFIX),
-                    ffi::OsString::from(&self.time_id),
-                    ffi::OsString::from("."),
-                    ffi::OsString::from(pid.to_string())
-                )
-            }
+            None => Err("Has not set pid on task file handler yet".into()),
+            Some(pid) => Ok(concat_os_strings!(
+                ffi::OsString::from(QUEUE_FILE_PREFIX),
+                ffi::OsString::from(&self.time_id),
+                ffi::OsString::from("."),
+                ffi::OsString::from(pid.to_string())
+            )),
         }
     }
 
-    fn path(&self) -> path::PathBuf {
+    fn path(&self) -> Result<path::PathBuf, String> {
         let mut file_path = self.queue_dir.clone();
-        file_path.push(self.filename());
-        file_path
+        file_path.push(self.filename()?);
+        Ok(file_path)
     }
 }
+
+// enum CmdOpsError {
+//     IO(io::Error)
+// }
+//
+// impl From<io::Error> for CmdOpsError {
+//     fn from(err: Error) -> Self {
+//         CmdOpsError::IO(err)
+//     }
+// }
 
 struct QueueFile {
     filepath: path::PathBuf,
@@ -172,75 +176,79 @@ pub fn queue(
     queue_dir: path::PathBuf,
     quiet: bool,
     clean: bool,
-) -> Result<(), nix::Error> {
-    let mut task_handler = TaskFileHandler::new(queue_dir, task_cmd, task_args);
+) -> Result<(), Box<dyn error::Error>> {
+    let mut task_handler = TaskFileHandler::new(queue_dir, task_cmd, task_args)?;
     let pipe = unistd::pipe()?;
-    let child_fork = unsafe { unistd::fork() };
+    let child_fork = unsafe { unistd::fork()? };
     match child_fork {
-        Ok(unistd::ForkResult::Parent { child }) => {
-            // should end process when necessary setup is complete:
-            // - child is backgrounded and ready for grandchild to start doing work
+        unistd::ForkResult::Parent { child: _ } => {
             let mut c: [u8; 1] = [0];
-            unistd::close(pipe.1);
+            unistd::close(pipe.1)?;
             // Will wait until grandchild process is ready
-            unistd::read(pipe.0, &mut c);
-            process::exit(0);
+            unistd::read(pipe.0, &mut c)?;
         }
-        Ok(unistd::ForkResult::Child) => {
-            unistd::close(pipe.0);
-
-            let grandchild_fork = unsafe { unistd::fork() };
+        unistd::ForkResult::Child => {
+            unistd::close(pipe.0)?;
+            let grandchild_fork = unsafe { unistd::fork()? };
             match grandchild_fork {
-                Ok(unistd::ForkResult::Parent { child }) => {
+                unistd::ForkResult::Parent { child } => {
                     let child_pid = child.as_raw();
                     if child_pid.is_negative() {
-                        // How is this ever negative?
-                        todo!();
+                        return Err(format!("Child pid is negative {}", child_pid).into());
                     }
+
                     task_handler.set_pid(child_pid as u32);
-                    let task_filename = task_handler.filename();
+                    let task_filename = task_handler.filename()?;
+
                     if !quiet {
                         writeln!(io::stdout(), "{}", task_filename.to_string_lossy());
                     }
-                    unistd::close(io::stdin().as_raw_fd());
-                    unistd::close(io::stdout().as_raw_fd());
-                    unistd::close(io::stderr().as_raw_fd());
-
-                    unistd::close(pipe.1);
-
-                    let child_status = sys::wait::wait();
 
                     let mut task_file = fs::OpenOptions::new()
                         .append(true)
-                        .open(task_handler.path())
-                        .unwrap();
+                        .open(task_handler.path()?)?;
                     task_file.set_permissions(fs::Permissions::from_mode(0o600));
 
-                    match child_status {
-                        Err(err) => todo!(),
+                    unistd::close(io::stdin().as_raw_fd())?;
+                    unistd::close(io::stdout().as_raw_fd())?;
+                    unistd::close(io::stderr().as_raw_fd())?;
+
+                    // Release initiating process
+                    unistd::close(pipe.1)?;
+
+                    match sys::wait::wait() {
+                        Err(err) => {
+                            // TODO: test this
+                            writeln!(task_file, "[child process has errored out: {}.]", err).ok();
+                        }
                         Ok(sys::wait::WaitStatus::Exited(_, exit_code)) => {
-                            writeln!(task_file, "[exited with status {}.]", exit_code);
+                            writeln!(task_file, "[exited with status {}.]", exit_code).ok();
                             if clean && exit_code == 0 {
-                                fs::remove_file(task_handler.path());
+                                if let Err(err) = fs::remove_file(task_handler.path()?) {
+                                    writeln!(task_file, "[failed to remove file: {}.]", err).ok();
+                                }
                             }
                         }
                         Ok(sys::wait::WaitStatus::Signaled(_, signal, _)) => {
-                            writeln!(task_file, "[received signal {}.]", signal);
+                            writeln!(task_file, "[received signal {}.]", signal).ok();
                         }
-                        _ => {
-                            todo!();
+                        Ok(unknown_state) => {
+                            // TODO: test this
+                            writeln!(
+                                task_file,
+                                "[child process has exited with unknown state: {:?}.]",
+                                unknown_state
+                            )
+                            .ok();
                         }
                     }
-
-                    process::exit(0)
                 }
-                Ok(unistd::ForkResult::Child) => {
+                unistd::ForkResult::Child => {
                     unistd::close(pipe.1);
                     task_handler.set_pid(process::id());
 
-                    let task_file_path = task_handler.path();
+                    let task_file_path = task_handler.path()?;
 
-                    // Creates scope to guarantee file close/drop at end
                     let mut task_file: fs::File = fs::OpenOptions::new()
                         .create_new(true)
                         .write(true)
@@ -314,16 +322,10 @@ pub fn queue(
                         }
                     }
                 }
-                Err(err) => {
-                    todo!();
-                }
             }
-            Ok(())
-        }
-        Err(err) => {
-            todo!();
         }
     }
+    Ok(())
 }
 
 fn test_env<T>(test: T) -> ()
