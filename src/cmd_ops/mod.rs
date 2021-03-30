@@ -5,7 +5,7 @@ pub use wait::wait;
 #[macro_use]
 mod os_strings;
 mod queue;
-mod queue_files;
+mod files;
 mod tap;
 mod wait;
 

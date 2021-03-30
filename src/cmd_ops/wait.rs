@@ -3,10 +3,10 @@ use std::os::unix::prelude::*;
 
 use nix::{errno, fcntl, unistd};
 
-use crate::cmd_ops::queue_files;
+use crate::cmd_ops::files;
 
 pub fn wait(queue_dir: path::PathBuf) -> Result<bool, Box<dyn error::Error>> {
-    let queue_files = queue_files::queue_files_sorted(&queue_dir)?;
+    let queue_files = files::files(&queue_dir)?;
 
     for entry in queue_files {
         let opened_file: fs::File = fs::OpenOptions::new()

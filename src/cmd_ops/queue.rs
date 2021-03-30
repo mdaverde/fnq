@@ -4,7 +4,7 @@ use std::{error, ffi, fs, io, path, process, time};
 
 use nix::{errno, fcntl, sys, unistd};
 
-use crate::cmd_ops::{queue_files, QUEUE_FILE_PREFIX};
+use crate::cmd_ops::{files, QUEUE_FILE_PREFIX};
 
 struct TaskFileHandler {
     pub queue_dir: path::PathBuf,
@@ -159,7 +159,7 @@ pub fn queue(
                     unistd::dup2(task_file_descriptor, io::stdout().as_raw_fd())?;
                     unistd::dup2(task_file_descriptor, io::stderr().as_raw_fd())?;
 
-                    for entry in queue_files::queue_files_sorted(&task_handler.queue_dir).unwrap() {
+                    for entry in files::files(&task_handler.queue_dir).unwrap() {
                         if entry.filepath == task_file_path {
                             // TODO: How do we test this?
                             continue;

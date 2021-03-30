@@ -2,12 +2,12 @@ use std::{ffi, fs, io, path, time};
 
 use crate::cmd_ops::{os_strings, QUEUE_FILE_PREFIX};
 
-pub struct QueueFile {
+pub struct QueueEntry {
     pub filepath: path::PathBuf,
     created: time::SystemTime,
 }
 
-pub fn queue_files_sorted(queue_dir: &path::PathBuf) -> Result<Vec<QueueFile>, io::Error> {
+pub fn files(queue_dir: &path::PathBuf) -> Result<Vec<QueueEntry>, io::Error> {
     let file_path_prefix = concat_os_strings!(
         queue_dir,
         ffi::OsString::from("/"),
@@ -29,13 +29,13 @@ pub fn queue_files_sorted(queue_dir: &path::PathBuf) -> Result<Vec<QueueFile>, i
         })
         .map(|dir_entry| {
             dir_entry.and_then(|dir_entry| {
-                Ok(QueueFile {
+                Ok(QueueEntry {
                     filepath: dir_entry.path(),
                     created: dir_entry.metadata()?.created()?,
                 })
             })
         })
-        .collect::<Result<Vec<QueueFile>, _>>()?;
+        .collect::<Result<Vec<QueueEntry>, _>>()?;
 
     queue_files.sort_by(|file_a, file_b| file_a.created.cmp(&file_b.created));
 
