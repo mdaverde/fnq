@@ -143,8 +143,7 @@ pub fn queue(
                         .create_new(true)
                         .write(true)
                         .mode(0o600)
-                        .open(&task_file_path)
-                        .unwrap();
+                        .open(&task_file_path)?;
                     // .expect(format!("Could not create task's queue file at {:?}", &task_file_path).as_str());
 
                     let task_file_descriptor = task_file.as_raw_fd();

@@ -4,8 +4,9 @@ use std::os::unix::prelude::*;
 use nix::{errno, fcntl, unistd};
 
 use crate::ops::files;
+use crate::ops::error::OpsError;
 
-pub fn wait(queue_dir: path::PathBuf) -> Result<bool, Box<dyn error::Error>> {
+pub fn wait(queue_dir: path::PathBuf) -> Result<bool, OpsError> {
     let queue_files = files::files(&queue_dir)?;
 
     for entry in queue_files {

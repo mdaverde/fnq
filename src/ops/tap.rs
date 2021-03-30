@@ -1,11 +1,12 @@
-use std::{error, fs, path};
+use std::{fs, path};
 use std::os::unix::prelude::*;
 
 use nix::{fcntl, unistd};
 
 use crate::ops::files;
+use crate::ops::error::OpsError;
 
-pub fn tap(queue_dir: path::PathBuf) -> Result<bool, Box<dyn error::Error>> {
+pub fn tap(queue_dir: path::PathBuf) -> Result<bool, OpsError> {
     let queue_files = files::files(&queue_dir)?;
 
     for entry in queue_files {

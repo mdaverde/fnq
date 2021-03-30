@@ -8,6 +8,7 @@ mod queue;
 mod files;
 mod tap;
 mod wait;
+mod error;
 
 pub const QUEUE_FILE_PREFIX: &'static str = "fnq";
 
