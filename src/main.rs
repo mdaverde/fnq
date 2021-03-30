@@ -33,14 +33,14 @@ fn main() {
             panic!(); // Did not understand args
         }
         ParseResult::TestAll => {
-            if let Err(err) = cmd_ops::queue_test(dir_path)
+            if let Err(err) = cmd_ops::tap(dir_path)
                 .map(|is_queue_ready| process::exit(if is_queue_ready { 0 } else { 1 }))
             {
                 eprintln!("Queue test error {:?}", err);
             }
         }
         ParseResult::WatchAll => {
-            if let Err(err) = cmd_ops::queue_wait(dir_path) {
+            if let Err(err) = cmd_ops::wait(dir_path) {
                 eprintln!("Queue watch error {:?}", err);
             }
         }
