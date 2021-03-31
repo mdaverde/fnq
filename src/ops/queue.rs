@@ -4,8 +4,7 @@ use std::{ffi, fs, io, path, process, time};
 
 use nix::{errno, fcntl, sys, unistd};
 
-use crate::ops::{files, QUEUE_FILE_PREFIX};
-use crate::ops::error::OpsError;
+use crate::ops::{files, QUEUE_FILE_PREFIX, open_file, OpsError};
 
 struct TaskFileHandler {
     pub queue_dir: path::PathBuf,
@@ -167,10 +166,7 @@ pub fn queue(
                             // TODO: How do we test this?
                             continue;
                         }
-                        let opened_file: fs::File = fs::OpenOptions::new()
-                            .read(true)
-                            .write(true)
-                            .open(&entry.filepath)?;
+                        let opened_file = open_file(&entry.filepath)?;
 
                         let lockable = fcntl::flock(
                             opened_file.as_raw_fd(),

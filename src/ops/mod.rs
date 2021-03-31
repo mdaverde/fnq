@@ -1,26 +1,26 @@
 pub use queue::queue;
 pub use tap::tap;
 pub use wait::wait;
+pub use error::OpsError;
+
+use std::{fs, io, path};
 
 #[macro_use]
 mod os_strings;
-mod queue;
+mod error;
 mod files;
+mod queue;
 mod tap;
 mod wait;
-mod error;
 
 pub const QUEUE_FILE_PREFIX: &'static str = "fnq";
 
-// enum CmdOpsError {
-//     IO(io::Error)
-// }
-//
-// impl From<io::Error> for CmdOpsError {
-//     fn from(err: Error) -> Self {
-//         CmdOpsError::IO(err)
-//     }
-// }
+fn open_file(path_buf: &path::PathBuf) -> Result<fs::File, io::Error> {
+    fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open(path_buf)
+}
 
 // use std::{env, fs, panic, path};
 // fn test_env<T>(test: T) -> ()
