@@ -1,10 +1,11 @@
 use std::io::Write;
 use std::os::unix::prelude::*;
-use std::{error, ffi, fs, io, path, process, time};
+use std::{ffi, fs, io, path, process, time};
 
 use nix::{errno, fcntl, sys, unistd};
 
 use crate::ops::{files, QUEUE_FILE_PREFIX};
+use crate::ops::error::OpsError;
 
 struct TaskFileHandler {
     pub queue_dir: path::PathBuf,
@@ -37,22 +38,22 @@ impl TaskFileHandler {
         })
     }
 
-    fn filename(&self) -> Result<ffi::OsString, String> {
+    fn filename(&self) -> ffi::OsString {
         match self.pid {
-            None => Err("Has not set pid on task file handler yet".into()),
-            Some(pid) => Ok(concat_os_strings!(
+            None => panic!("Has not set pid on task file handler yet"),
+            Some(pid) => concat_os_strings!(
                 ffi::OsString::from(QUEUE_FILE_PREFIX),
                 ffi::OsString::from(&self.time_id),
                 ffi::OsString::from("."),
                 ffi::OsString::from(pid.to_string())
-            )),
+            ),
         }
     }
 
-    fn path(&self) -> Result<path::PathBuf, String> {
+    fn path(&self) -> path::PathBuf {
         let mut file_path = self.queue_dir.clone();
-        file_path.push(self.filename()?);
-        Ok(file_path)
+        file_path.push(self.filename());
+        file_path
     }
 }
 
@@ -62,7 +63,7 @@ pub fn queue(
     queue_dir: path::PathBuf,
     quiet: bool,
     clean: bool,
-) -> Result<(), Box<dyn error::Error>> {
+) -> Result<(), OpsError> {
     let mut task_handler = TaskFileHandler::new(queue_dir, task_cmd, task_args)?;
     let pipe = unistd::pipe()?;
     let child_fork = unsafe { unistd::fork()? };
@@ -80,11 +81,11 @@ pub fn queue(
                 unistd::ForkResult::Parent { child } => {
                     let child_pid = child.as_raw();
                     if child_pid.is_negative() {
-                        return Err(format!("Child pid is negative {}", child_pid).into());
+                        return Err(OpsError::Unix(format!("Child pid is negative {}", child_pid)));
                     }
 
                     task_handler.set_pid(child_pid as u32);
-                    let task_filename = task_handler.filename()?;
+                    let task_filename = task_handler.filename();
 
                     if !quiet {
                         writeln!(io::stdout(), "{}", task_filename.to_string_lossy())?;
@@ -103,7 +104,7 @@ pub fn queue(
 
                     let mut task_file = fs::OpenOptions::new()
                         .append(true)
-                        .open(task_handler.path()?)?;
+                        .open(task_handler.path())?;
                     task_file.set_permissions(fs::Permissions::from_mode(0o600))?;
 
                     match child_status {
@@ -114,7 +115,7 @@ pub fn queue(
                         Ok(sys::wait::WaitStatus::Exited(_, exit_code)) => {
                             writeln!(task_file, "[exited with status {}.]", exit_code).ok();
                             if clean && exit_code == 0 {
-                                if let Err(err) = fs::remove_file(task_handler.path()?) {
+                                if let Err(err) = fs::remove_file(task_handler.path()) {
                                     writeln!(task_file, "[failed to remove file: {}.]", err).ok();
                                 }
                             }
@@ -137,7 +138,7 @@ pub fn queue(
                     unistd::close(pipe.1)?;
                     task_handler.set_pid(process::id());
 
-                    let task_file_path = task_handler.path()?;
+                    let task_file_path = task_handler.path();
 
                     let mut task_file: fs::File = fs::OpenOptions::new()
                         .create_new(true)
@@ -150,18 +151,18 @@ pub fn queue(
 
                     fcntl::flock(task_file_descriptor, fcntl::FlockArg::LockExclusive)?;
 
-                    let cmd_str = task_handler.cmd.to_str().unwrap();
-                    let args_str: Vec<&str> = task_handler
+                    let cmd_str = task_handler.cmd.to_str().ok_or(OpsError::StringConv)?;
+                    let args_str = task_handler
                         .args
                         .iter()
-                        .map(|arg| arg.to_str().unwrap())
-                        .collect();
+                        .map(|arg| arg.to_str().ok_or(OpsError::StringConv))
+                        .collect::<Result<Vec<&str>, OpsError>>()?;
                     writeln!(task_file, "exec {} {}", cmd_str, args_str.join(" "))?;
 
                     unistd::dup2(task_file_descriptor, io::stdout().as_raw_fd())?;
                     unistd::dup2(task_file_descriptor, io::stderr().as_raw_fd())?;
 
-                    for entry in files::files(&task_handler.queue_dir).unwrap() {
+                    for entry in files::files(&task_handler.queue_dir)? {
                         if entry.filepath == task_file_path {
                             // TODO: How do we test this?
                             continue;
@@ -169,8 +170,7 @@ pub fn queue(
                         let opened_file: fs::File = fs::OpenOptions::new()
                             .read(true)
                             .write(true)
-                            .open(&entry.filepath)
-                            .unwrap();
+                            .open(&entry.filepath)?;
 
                         let lockable = fcntl::flock(
                             opened_file.as_raw_fd(),
@@ -194,15 +194,15 @@ pub fn queue(
                     task_file.set_permissions(fs::Permissions::from_mode(0o700))?;
 
                     let cmd_c: ffi::CString =
-                        ffi::CString::new(task_handler.cmd.as_os_str().as_bytes()).unwrap();
+                        ffi::CString::new(task_handler.cmd.as_os_str().as_bytes())?;
                     task_handler.args.insert(0, task_handler.cmd);
-                    let args_c: Vec<ffi::CString> = task_handler
+                    let args_c = task_handler
                         .args
                         .iter()
-                        .map(|arg| ffi::CString::new(arg.as_os_str().as_bytes()).unwrap())
-                        .collect();
+                        .map(|arg| ffi::CString::new(arg.as_os_str().as_bytes()))
+                        .collect::<Result<Vec<ffi::CString>, ffi::NulError>>()?;
 
-                    unistd::setsid().unwrap();
+                    unistd::setsid()?;
                     if let Err(err) = unistd::execvp(&cmd_c, &args_c) {
                         if nix::Error::Sys(errno::Errno::ENOENT) == err {
                             panic!("{:?}: Could not find {:?} in path", err, &cmd_c);

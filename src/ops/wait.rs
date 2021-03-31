@@ -1,4 +1,4 @@
-use std::{error, fs, path};
+use std::{fs, path};
 use std::os::unix::prelude::*;
 
 use nix::{errno, fcntl, unistd};
