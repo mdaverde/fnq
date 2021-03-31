@@ -30,3 +30,27 @@ impl OsStringStartsWithExt for &ffi::OsStr {
         true
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_concat_macro() {
+        let hello: ffi::OsString = "hello".into();
+        let world: ffi::OsString = "world".into();
+
+        assert_eq!(
+            concat_os_strings!(hello, world),
+            ffi::OsString::from("helloworld")
+        )
+    }
+
+    #[test]
+    fn test_starts_with() {
+        let foobar: ffi::OsString = "foobar".into();
+        assert!(foobar
+            .as_os_str()
+            .starts_with(ffi::OsString::from("foo").as_os_str()));
+    }
+}
