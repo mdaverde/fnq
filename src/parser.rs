@@ -3,10 +3,8 @@ use std::ffi;
 #[derive(Debug, PartialEq)]
 pub enum ParseResult {
     Error,
-    TapAll,
-    TapSingle(ffi::OsString),
-    WaitAll,
-    WaitSingle(ffi::OsString),
+    Tap(Option<ffi::OsString>),
+    Wait(Option<ffi::OsString>),
     Queue(ffi::OsString, Vec<ffi::OsString>, bool, bool),
 }
 
@@ -19,17 +17,17 @@ pub fn parse_args(mut args: Vec<ffi::OsString>) -> ParseResult {
     let arg = &args[1];
     if arg == "--tap" {
         return if len == 2 {
-            ParseResult::TapAll
+            ParseResult::Tap(None)
         } else if len == 3 {
-            ParseResult::TapSingle(args.drain(2..3).next().unwrap())
+            ParseResult::Tap(args.drain(2..3).next())
         } else {
             ParseResult::Error
         };
     } else if arg == "--wait" {
         return if len == 2 {
-            ParseResult::WaitAll
+            ParseResult::Wait(None)
         } else if len == 3 {
-            ParseResult::WaitSingle(args.drain(2..3).next().unwrap())
+            ParseResult::Wait(args.drain(2..3).next())
         } else {
             ParseResult::Error
         };
@@ -73,7 +71,7 @@ mod tests {
         assert_eq!(parse_args(args), ParseResult::Error);
 
         args = vec!["fnq".into(), "--tap".into()];
-        assert_eq!(parse_args(args), ParseResult::TapAll);
+        assert_eq!(parse_args(args), ParseResult::Tap(None));
 
         args = vec!["fnq".into(), "--wait".into()];
         assert_eq!(parse_args(args), ParseResult::WaitAll);
@@ -122,7 +120,7 @@ mod tests {
         );
 
         args = vec!["fnq".into(), "--tap".into()];
-        assert_eq!(parse_args(args), ParseResult::TapAll);
+        assert_eq!(parse_args(args), ParseResult::Tap(None));
 
         args = vec![
             "fnq".into(),
@@ -131,7 +129,7 @@ mod tests {
         ];
         assert_eq!(
             parse_args(args),
-            ParseResult::TapSingle("queue_file.pid".into())
+            ParseResult::Tap(Some("queue_file.pid".into()))
         );
 
         args = vec!["fnq".into(), "--wait".into()];

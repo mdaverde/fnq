@@ -9,7 +9,8 @@ pub enum OpsError {
     StringConv,
     IO(io::Error),
     Unix(String), // ??
-    SystemTime(time::SystemTimeError)
+    SystemTime(time::SystemTimeError),
+    Unknown(String)
 }
 
 impl fmt::Display for OpsError {
@@ -18,7 +19,8 @@ impl fmt::Display for OpsError {
             OpsError::StringConv => write!(f, "UTF-8 conversion unsuccessful"),
             OpsError::IO(io_err) => io_err.fmt(f),
             OpsError::Unix(nix_err) => nix_err.fmt(f),
-            OpsError::SystemTime(sys_time_err) => sys_time_err.fmt(f)
+            OpsError::SystemTime(sys_time_err) => sys_time_err.fmt(f),
+            OpsError::Unknown(str_err) => write!(f, "Unknown error: {}", str_err)
         }
     }
 }

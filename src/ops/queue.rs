@@ -4,7 +4,7 @@ use std::{ffi, fs, io, path, process, time};
 
 use nix::{errno, fcntl, sys, unistd};
 
-use crate::ops::{files, QUEUE_FILE_PREFIX, open_file, OpsError};
+use crate::ops::{files, open_file, OpsError, QUEUE_FILE_PREFIX};
 
 struct TaskFileHandler {
     pub queue_dir: path::PathBuf,
@@ -80,7 +80,10 @@ pub fn queue(
                 unistd::ForkResult::Parent { child } => {
                     let child_pid = child.as_raw();
                     if child_pid.is_negative() {
-                        return Err(OpsError::Unix(format!("Child pid is negative {}", child_pid)));
+                        return Err(OpsError::Unix(format!(
+                            "Child pid is negative {}",
+                            child_pid
+                        )));
                     }
 
                     task_handler.set_pid(child_pid as u32);
@@ -122,12 +125,12 @@ pub fn queue(
                         Ok(sys::wait::WaitStatus::Signaled(_, signal, _)) => {
                             writeln!(task_file, "[received signal {}.]", signal).ok();
                         }
-                        Ok(unknown_state) => {
+                        Ok(unknown) => {
                             // TODO: test this
                             writeln!(
                                 task_file,
-                                "[child process has exited with unknown state: {:?}.]",
-                                unknown_state
+                                "[child process has exited with unknown state: {:?}]",
+                                unknown
                             )
                             .ok();
                         }
@@ -166,23 +169,22 @@ pub fn queue(
                             // TODO: How do we test this?
                             continue;
                         }
+
                         let opened_file = open_file(&entry.filepath)?;
 
                         let lockable = fcntl::flock(
                             opened_file.as_raw_fd(),
                             fcntl::FlockArg::LockSharedNonblock,
                         );
-                        if lockable.is_err() {
+
+                        if let Err(_) = lockable {
                             if (errno::EWOULDBLOCK as i32) == errno::errno() {
                                 fcntl::flock(opened_file.as_raw_fd(), fcntl::FlockArg::LockShared)?;
-                            } else {
-                                println!("can not open {} {}", errno::errno(), errno::EWOULDBLOCK);
-                                unimplemented!();
                             }
+                        } else {
+                            // Remove process lock
+                            unistd::close(opened_file.as_raw_fd())?;
                         }
-
-                        // Remove process lock
-                        unistd::close(opened_file.as_raw_fd())?;
                     }
 
                     writeln!(task_file, "")?;
