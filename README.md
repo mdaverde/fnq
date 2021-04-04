@@ -5,7 +5,7 @@ A flock-based approach to queuing Unix processes & tasks
 ## How to use
 
 ```shell
-$ fnq [-quiet/-q | --cleanup] cmd
+$ fnq [--quiet | --clean] cmd
 ```
 
 ### Example
@@ -20,15 +20,15 @@ $ fnq --wait # Will block until last task finishes
 
 ### Flags
 
-#### `--quiet / -q`
+#### `--quiet`
 
-#### `--clean / -c`
+#### `--clean`
 
-#### `--wait / -w`
+#### `--wait [fnq_queue_file.pid]`
 
 Accepts a fnq output file to wait for 
 
-#### `--tap / -t`
+#### `--tap [fnq_queue_file.pid]`
 
 Accepts a fnq output file to tap process status
 
