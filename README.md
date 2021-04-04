@@ -14,6 +14,8 @@ Set `FNQ_DIR` in your env to dictate where to store queue files. Defaults to `$(
 $ FNQ_DIR=/tmp/fnq fnq [--quiet | --clean] cmd
 ```
 
+Protip: since `fnq` uses `FNQ_DIR` to determine queue state, you can create an entirely new queue by changing `FNQ_DIR`
+
 ### Example
 
 ```shell
@@ -60,6 +62,11 @@ $ cargo install --path path_to_repo
 ```
 
 This should make `fnq` available everywhere assuming your cargo crates are in `$PATH`
+
+## About
+
+This package depends on [nix](https://github.com/nix-rust/nix) to abstract over Unix flock operations, so presumably if nix works on a platform, this bin should work.
+
 
 ## License
 
