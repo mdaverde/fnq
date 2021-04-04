@@ -1,7 +1,7 @@
 use std::os::unix::prelude::*;
 use std::path;
 
-use nix::{fcntl, unistd};
+use nix::fcntl;
 
 use crate::ops::{files, open_file, OpsError};
 
@@ -22,26 +22,25 @@ pub fn tap(queue_dir: &path::PathBuf, queue_file: Option<path::PathBuf>) -> Resu
             }
             Some(entry) => {
                 let opened_file = open_file(&entry.filepath)?;
-                if fcntl::flock(opened_file.as_raw_fd(), fcntl::FlockArg::LockSharedNonblock)
-                    .is_err()
-                {
+                let fd: RawFd = opened_file.as_raw_fd();
+
+                if fcntl::flock(fd, fcntl::FlockArg::LockSharedNonblock).is_err() {
                     return Ok(true);
                 }
 
-                // Remove process lock
-                unistd::close(opened_file.as_raw_fd())?;
+                fcntl::flock(fd, fcntl::FlockArg::Unlock)?;
             }
         }
     } else {
         for entry in queue_files {
             let opened_file = open_file(&entry.filepath)?;
+            let fd: RawFd = opened_file.as_raw_fd();
 
-            if fcntl::flock(opened_file.as_raw_fd(), fcntl::FlockArg::LockSharedNonblock).is_err() {
+            if fcntl::flock(fd, fcntl::FlockArg::LockSharedNonblock).is_err() {
                 return Ok(true);
             }
 
-            // Remove lock
-            unistd::close(opened_file.as_raw_fd())?;
+            fcntl::flock(fd, fcntl::FlockArg::Unlock)?;
         }
     }
 

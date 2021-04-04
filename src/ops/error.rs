@@ -1,5 +1,5 @@
 use std::fmt::Formatter;
-use std::{error, fmt, io, time, ffi};
+use std::{error, ffi, fmt, io, time};
 
 // Idea: what if we used a trait object instead of an enum?
 // What would this look like?
@@ -10,7 +10,7 @@ pub enum OpsError {
     IO(io::Error),
     Unix(String), // ??
     SystemTime(time::SystemTimeError),
-    Unknown(String)
+    Unknown(String),
 }
 
 impl fmt::Display for OpsError {
@@ -20,7 +20,7 @@ impl fmt::Display for OpsError {
             OpsError::IO(io_err) => io_err.fmt(f),
             OpsError::Unix(nix_err) => nix_err.fmt(f),
             OpsError::SystemTime(sys_time_err) => sys_time_err.fmt(f),
-            OpsError::Unknown(str_err) => write!(f, "Unknown error: {}", str_err)
+            OpsError::Unknown(str_err) => write!(f, "Unknown error: {}", str_err),
         }
     }
 }
@@ -50,4 +50,3 @@ impl From<ffi::NulError> for OpsError {
         OpsError::StringConv
     }
 }
-

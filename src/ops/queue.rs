@@ -4,7 +4,7 @@ use std::{ffi, fs, io, path, process, time};
 
 use nix::{errno, fcntl, sys, unistd};
 
-use crate::ops::{files, open_file, OpsError, QUEUE_FILE_PREFIX};
+use crate::ops::{files, lock_on_blocked_file, OpsError, QUEUE_FILE_PREFIX};
 
 struct TaskFileHandler {
     pub queue_dir: path::PathBuf,
@@ -170,21 +170,7 @@ pub fn queue(
                             continue;
                         }
 
-                        let opened_file = open_file(&entry.filepath)?;
-
-                        let lockable = fcntl::flock(
-                            opened_file.as_raw_fd(),
-                            fcntl::FlockArg::LockSharedNonblock,
-                        );
-
-                        if let Err(_) = lockable {
-                            if (errno::EWOULDBLOCK as i32) == errno::errno() {
-                                fcntl::flock(opened_file.as_raw_fd(), fcntl::FlockArg::LockShared)?;
-                            }
-                        } else {
-                            // Remove process lock
-                            unistd::close(opened_file.as_raw_fd())?;
-                        }
+                        lock_on_blocked_file(&entry.filepath)?;
                     }
 
                     writeln!(task_file, "")?;
