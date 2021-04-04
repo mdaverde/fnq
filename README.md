@@ -8,6 +8,16 @@ A flock-based approach to queuing Unix processes & tasks
 $ fnq [-quiet/-q | --cleanup] cmd
 ```
 
+### Example
+
+```shell
+$ fnq job1 # Looks in path for job1
+$ fnq job2
+$ fnq job3
+$ fnq --tap fnq1617221011732.53617 # Will check if job is running
+$ fnq --wait # Will block until last job finishes
+```
+
 ### Flags
 
 #### `--quiet / -q`
