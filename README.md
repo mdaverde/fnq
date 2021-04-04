@@ -53,6 +53,14 @@ Accepts a queue output file to determine if running, otherwise determines succes
 
 ## Install
 
+### Cargo
+
+If you're using a recent version of Cargo, you can see the `cargo install` command:
+
+```shell
+$ cargo install fnq
+```
+
 ### Build from source
 
 After git cloning this repo, you can install as a cargo crate through
