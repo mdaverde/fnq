@@ -19,11 +19,11 @@ Protip: since `fnq` uses `FNQ_DIR` to determine queue state, you can create an e
 ### Example
 
 ```shell
-$ fnq task1 # Looks in PATH for task1
+$ fnq ./task1 # Can also look in PATH
 fnq1617220638670.52957
-$ fnq task2 taskarg1 taskarg2 # Queues future tasks
+$ fnq ./task2 taskarg1 taskarg2 # Queues future tasks
 fnq1617221011799.53621
-$ fnq task3
+$ fnq ./task3
 fnq1617221184552.54371
 $ ls $FNQ_DIR
 fnq1617220638670.52957  fnq1617221011799.53621  fnq1617221184552.54371
@@ -65,7 +65,7 @@ This should make `fnq` available everywhere assuming your cargo crates are in `$
 
 ## About
 
-This package depends on [nix](https://github.com/nix-rust/nix) to abstract over Unix flock operations, so presumably if nix works on a platform, this bin should work.
+This package depends on [nix](https://github.com/nix-rust/nix) to abstract over Unix flock operations, so presumably if nix works on a platform, this bin should work. Part of the work here is creating a suitable testing suite to run across different machines
 
 
 ## License

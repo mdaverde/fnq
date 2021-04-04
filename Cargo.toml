@@ -3,6 +3,12 @@ name = "fnq"
 version = "0.1.0"
 authors = ["Milan <milanlandaverde@gmail.com>"]
 edition = "2018"
+homepage = "https://github.com/mdaverde/fnq"
+repository = "https://github.com/mdaverde/fnq"
+license = "MIT"
+readme = "README.md"
+description = "A flock-based approach to queuing Unix tasks & processes"
+
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
