@@ -43,11 +43,11 @@ Note that the std{out,error} from the task cmd will still be saved to the corres
 
 Deletes queue file in `$FNQ_DIR` after task completes
 
-#### `--wait [fnq_queue_file.pid]`
+#### `--wait [queuefile.pid]`
 
 Accepts a queue output file to wait for, otherwise blocks and waits for entire queue to finish
 
-#### `--tap [fnq_queue_file.pid]`
+#### `--tap [queuefile.pid]`
 
 Accepts a queue output file to determine if running, otherwise determines success based if entire queue if finished
 
@@ -73,7 +73,9 @@ This should make `fnq` available everywhere assuming your cargo crates are in `$
 
 ## About
 
-This package depends on [nix](https://github.com/nix-rust/nix) to abstract over Unix flock operations, so presumably if nix works on a platform, this bin should work. Part of the work here is creating a suitable testing suite to run across different machines
+Much of the functionality here is heavily inspired by [nq](https://github.com/leahneukirchen/nq) (written in C).
+
+This package depends on [nix](https://github.com/nix-rust/nix) to abstract over Unix flock operations, so presumably if nix works on a platform, this bin should work. Part of the work needed here is creating a suitable testing suite to run across different machines
 
 Currently tested on linux x86_64 during development
 
