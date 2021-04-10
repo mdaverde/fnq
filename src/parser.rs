@@ -6,6 +6,8 @@ pub enum ParseResult {
     Tap(Option<ffi::OsString>),
     Wait(Option<ffi::OsString>),
     Queue(ffi::OsString, Vec<ffi::OsString>, bool, bool),
+    Help,
+    Version,
 }
 
 pub fn parse_args(mut args: Vec<ffi::OsString>) -> ParseResult {
@@ -15,7 +17,11 @@ pub fn parse_args(mut args: Vec<ffi::OsString>) -> ParseResult {
     }
 
     let arg = &args[1];
-    if arg == "--tap" {
+    if arg == "--help" || arg == "-h" {
+        return ParseResult::Help;
+    } else if arg == "--version" || arg == "-v" {
+        return ParseResult::Version;
+    } else if arg == "--tap" || arg == "-t" {
         return if len == 2 {
             ParseResult::Tap(None)
         } else if len == 3 {
@@ -23,7 +29,7 @@ pub fn parse_args(mut args: Vec<ffi::OsString>) -> ParseResult {
         } else {
             ParseResult::Error
         };
-    } else if arg == "--wait" {
+    } else if arg == "--wait" || arg == "-w" {
         return if len == 2 {
             ParseResult::Wait(None)
         } else if len == 3 {
@@ -38,10 +44,10 @@ pub fn parse_args(mut args: Vec<ffi::OsString>) -> ParseResult {
     let mut clean = false;
 
     for arg in &args[1..] {
-        if arg == "--quiet" {
+        if arg == "--quiet" || arg == "-q" {
             quiet = true;
             index += 1;
-        } else if arg == "--clean" {
+        } else if arg == "--clean" || arg == "-c" {
             clean = true;
             index += 1;
         } else {
@@ -73,19 +79,19 @@ mod tests {
         args = vec!["fnq".into(), "--tap".into()];
         assert_eq!(parse_args(args), ParseResult::Tap(None));
 
-        args = vec!["fnq".into(), "--wait".into()];
-        assert_eq!(parse_args(args), ParseResult::WaitAll);
-
-        args = vec!["fnq".into(), "--wait".into(), "some_random_file".into()];
-        assert_eq!(
-            parse_args(args),
-            ParseResult::WaitSingle("some_random_file".into())
-        );
+        args = vec!["fnq".into(), "-t".into()];
+        assert_eq!(parse_args(args), ParseResult::Tap(None));
 
         args = vec!["fnq".into(), "--quiet".into()];
         assert_eq!(parse_args(args), ParseResult::Error);
 
+        args = vec!["fnq".into(), "-q".into()];
+        assert_eq!(parse_args(args), ParseResult::Error);
+
         args = vec!["fnq".into(), "--clean".into()];
+        assert_eq!(parse_args(args), ParseResult::Error);
+
+        args = vec!["fnq".into(), "-c".into()];
         assert_eq!(parse_args(args), ParseResult::Error);
 
         args = vec!["fnq".into(), "--quiet".into(), "sleep".into(), "2".into()];
@@ -93,12 +99,22 @@ mod tests {
             parse_args(args),
             ParseResult::Queue("sleep".into(), vec!("2".into()), true, false)
         );
-
-        args = vec!["fnq".into(), "--clean".into(), "sleep".into(), "2".into()];
-
+        args = vec!["fnq".into(), "-q".into(), "sleep".into(), "2".into()];
         assert_eq!(
             parse_args(args),
-            ParseResult::Queue("sleep".into(), vec!("2".into()), false, true,)
+            ParseResult::Queue("sleep".into(), vec!("2".into()), true, false)
+        );
+
+        args = vec!["fnq".into(), "--clean".into(), "sleep".into(), "2".into()];
+        assert_eq!(
+            parse_args(args),
+            ParseResult::Queue("sleep".into(), vec!("2".into()), false, true)
+        );
+
+        args = vec!["fnq".into(), "-c".into(), "sleep".into(), "2".into()];
+        assert_eq!(
+            parse_args(args),
+            ParseResult::Queue("sleep".into(), vec!("2".into()), false, true)
         );
 
         args = vec![
@@ -113,10 +129,22 @@ mod tests {
             ParseResult::Queue("sleep".into(), vec!("2".into()), true, true)
         );
 
+        args = vec![
+            "fnq".into(),
+            "-c".into(),
+            "-q".into(),
+            "sleep".into(),
+            "2".into(),
+        ];
+        assert_eq!(
+            parse_args(args),
+            ParseResult::Queue("sleep".into(), vec!("2".into()), true, true)
+        );
+
         args = vec!["fnq".into(), "sleep".into()];
         assert_eq!(
             parse_args(args),
-            ParseResult::Queue("sleep".into(), vec!(), false, false,)
+            ParseResult::Queue("sleep".into(), vec!(), false, false)
         );
 
         args = vec!["fnq".into(), "--tap".into()];
@@ -132,13 +160,12 @@ mod tests {
             ParseResult::Tap(Some("queue_file.pid".into()))
         );
 
-        args = vec!["fnq".into(), "--wait".into()];
-        assert_eq!(parse_args(args), ParseResult::WaitAll);
+        assert_eq!(parse_args(vec!["fnq".into(), "--version".into()]), ParseResult::Version);
+        assert_eq!(parse_args(vec!["fnq".into(), "-v".into()]), ParseResult::Version);
+        assert_eq!(parse_args(vec!["fnq".into(), "-v".into(), "somethingelse".into()]), ParseResult::Version);
 
-        args = vec!["fnq".into(), "--wait".into(), "queue_file.pid".into()];
-        assert_eq!(
-            parse_args(args),
-            ParseResult::WaitSingle("queue_file.pid".into())
-        );
+        assert_eq!(parse_args(vec!["fnq".into(), "--help".into()]), ParseResult::Help);
+        assert_eq!(parse_args(vec!["fnq".into(), "-h".into()]), ParseResult::Help);
+        assert_eq!(parse_args(vec!["fnq".into(), "-h".into(), "somethingelse".into()]), ParseResult::Help);
     }
 }

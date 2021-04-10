@@ -47,7 +47,7 @@ teardown() {
 
 setup
 (
-printf '# nq tests\n'
+printf '# fnq tests\n'
 check 'fails with no arguments' ! $FNQ
 check 'succeeds enqueueing true' 'f=$($FNQ true)'
 sleep 1

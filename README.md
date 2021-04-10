@@ -75,6 +75,7 @@ This should make `fnq` available everywhere assuming your cargo crates are in `$
 
 This package depends on [nix](https://github.com/nix-rust/nix) to abstract over Unix flock operations, so presumably if nix works on a platform, this bin should work. Part of the work here is creating a suitable testing suite to run across different machines
 
+Currently tested on linux x86_64 during development
 
 ## License
 

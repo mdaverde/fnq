@@ -3,9 +3,28 @@ use std::{env, ffi, fs, path, process};
 mod ops;
 mod parser;
 
+static USAGE: &'static str = "fnq - A flock-based approach to queuing Unix tasks & processes
+
+USAGE:
+    fnq [FLAGS] <command>
+    fnq --tap <queue file>
+    fnq --wait <queue file>
+
+FLAGS:
+    -c, --clean     Removes queue file after process complete
+    -q, --quiet     No print out of queue file to stdout
+    -t, --tap       Determines if queue file's process is complete. If no
+                    queue file specified, then checks all in FNQ_DIR
+    -w, --wait      Will block if queue file's process is not complete. If no
+                    queue file specified, then blocks on all in FNQ_DIR
+    -v, --version   Prints version information
+    -h, --help      Prints help information
+";
+
+static VERSION: &'static str = env!("CARGO_PKG_VERSION");
+
 fn print_usage() {
-    let usage = "Wrong usage";
-    println!("{}", usage);
+    println!("{}", USAGE);
 }
 
 fn ensure_dir(dir: ffi::OsString) -> path::PathBuf {
@@ -43,9 +62,15 @@ fn main() {
     let fnq_dir = env::var_os("FNQ_DIR").unwrap_or(ffi::OsString::from("."));
     let dir_path = ensure_dir(fnq_dir);
     match parser::parse_args(args) {
+        ParseResult::Version => {
+            println!("{}", VERSION);
+        }
+        ParseResult::Help => {
+            print_usage();
+        }
         ParseResult::Error => {
             print_usage();
-            panic!(); // Did not understand args
+            process::exit(1);
         }
         ParseResult::Tap(queue_file) => match get_queue_path(&dir_path, queue_file) {
             Err(err) => {
