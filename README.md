@@ -1,7 +1,7 @@
 <div align="center">
 	<h1>fnq (pronounced FUNK)</h1>
 	<p>
-		<b>A flock-based approach to queuing Unix tasks & processes</b>
+		A flock-based approach to queuing Unix tasks & processes
 	</p>
 	<br>
 </div>
@@ -23,8 +23,7 @@ $ fnq ./task1 # Can also look in PATH
 fnq1617220638670.52957
 $ fnq ./task2 taskarg1 taskarg2 # Queues future tasks
 fnq1617221011799.53621
-$ fnq ./task3
-fnq1617221184552.54371
+$ fnq -q ./task3
 $ ls $FNQ_DIR
 fnq1617220638670.52957  fnq1617221011799.53621  fnq1617221184552.54371
 $ fnq --tap fnq1617221011799.53621 # Will check if task is running
@@ -33,21 +32,21 @@ $ fnq --wait # Will block until last task finishes
 
 ### Flags
 
-#### `--quiet`
+#### `--quiet / -q`
 
 No stdout
 
-Note that the std{out,error} from the task cmd will still be saved to the corresponding queue file
+**Note:** std{out,error} from the task cmd will still be saved to the corresponding queue file
 
-#### `--clean`
+#### `--clean / -c`
 
 Deletes queue file in `$FNQ_DIR` after task completes
 
-#### `--wait [queuefile.pid]`
+#### `--wait / -w <queuefile.pid>`
 
 Accepts a queue output file to wait for, otherwise blocks and waits for entire queue to finish
 
-#### `--tap [queuefile.pid]`
+#### `--tap / -t <queuefile.pid>`
 
 Accepts a queue output file to determine if running, otherwise determines success based if entire queue if finished
 
