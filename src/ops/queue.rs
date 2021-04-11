@@ -1,6 +1,6 @@
+use std::{env, ffi, fs, io, path, process, time};
 use std::io::Write;
 use std::os::unix::prelude::*;
-use std::{ffi, fs, io, path, process, time};
 
 use nix::{errno, fcntl, sys, unistd};
 
@@ -178,6 +178,8 @@ pub fn queue(
 
                     task_file.set_permissions(fs::Permissions::from_mode(0o700))?;
 
+                    let task_filename = task_handler.filename();
+
                     let cmd_c: ffi::CString =
                         ffi::CString::new(task_handler.cmd.as_os_str().as_bytes())?;
                     task_handler.args.insert(0, task_handler.cmd);
@@ -187,6 +189,7 @@ pub fn queue(
                         .map(|arg| ffi::CString::new(arg.as_os_str().as_bytes()))
                         .collect::<Result<Vec<ffi::CString>, ffi::NulError>>()?;
 
+                    env::set_var("FNQJOBID", task_filename);
                     unistd::setsid()?;
                     if let Err(err) = unistd::execvp(&cmd_c, &args_c) {
                         if nix::Error::Sys(errno::Errno::ENOENT) == err {

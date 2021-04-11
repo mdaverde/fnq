@@ -64,7 +64,7 @@ setup
 printf "# env tests\n"
 check 'enqueueing env' f1=$($FNQ env)
 $FNQ --wait
-# check 'FNQJOBID is set' grep -q FNQJOBID=$f1 $f1
+check 'FNQJOBID is set' grep -q FNQJOBID=$f1 $f1
 )
 teardown
 
