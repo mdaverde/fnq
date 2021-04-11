@@ -5,7 +5,7 @@ pub enum ParseResult {
     Error,
     Tap(Option<ffi::OsString>),
     Wait(Option<ffi::OsString>),
-    Queue(ffi::OsString, Vec<ffi::OsString>, bool, bool),
+    Queue(ffi::OsString, ffi::OsString, Vec<ffi::OsString>, bool, bool),
     Help,
     Version,
 }
@@ -58,7 +58,8 @@ pub fn parse_args(mut args: Vec<ffi::OsString>) -> ParseResult {
     if index < len {
         let task_cmd = args.drain(index..index + 1).next().unwrap();
         let task_args = args.drain(index..).collect();
-        return ParseResult::Queue(task_cmd, task_args, quiet, clean);
+        let fnq_cmd = args.drain(0..1).next().unwrap();
+        return ParseResult::Queue(fnq_cmd, task_cmd, task_args, quiet, clean);
     }
 
     ParseResult::Error
@@ -97,24 +98,24 @@ mod tests {
         args = vec!["fnq".into(), "--quiet".into(), "sleep".into(), "2".into()];
         assert_eq!(
             parse_args(args),
-            ParseResult::Queue("sleep".into(), vec!("2".into()), true, false)
+            ParseResult::Queue("fnq".into(), "sleep".into(), vec!("2".into()), true, false)
         );
         args = vec!["fnq".into(), "-q".into(), "sleep".into(), "2".into()];
         assert_eq!(
             parse_args(args),
-            ParseResult::Queue("sleep".into(), vec!("2".into()), true, false)
+            ParseResult::Queue("fnq".into(), "sleep".into(), vec!("2".into()), true, false)
         );
 
         args = vec!["fnq".into(), "--clean".into(), "sleep".into(), "2".into()];
         assert_eq!(
             parse_args(args),
-            ParseResult::Queue("sleep".into(), vec!("2".into()), false, true)
+            ParseResult::Queue("fnq".into(), "sleep".into(), vec!("2".into()), false, true)
         );
 
         args = vec!["fnq".into(), "-c".into(), "sleep".into(), "2".into()];
         assert_eq!(
             parse_args(args),
-            ParseResult::Queue("sleep".into(), vec!("2".into()), false, true)
+            ParseResult::Queue("fnq".into(), "sleep".into(), vec!("2".into()), false, true)
         );
 
         args = vec![
@@ -126,7 +127,7 @@ mod tests {
         ];
         assert_eq!(
             parse_args(args),
-            ParseResult::Queue("sleep".into(), vec!("2".into()), true, true)
+            ParseResult::Queue("fnq".into(), "sleep".into(), vec!("2".into()), true, true)
         );
 
         args = vec![
@@ -138,13 +139,13 @@ mod tests {
         ];
         assert_eq!(
             parse_args(args),
-            ParseResult::Queue("sleep".into(), vec!("2".into()), true, true)
+            ParseResult::Queue("fnq".into(), "sleep".into(), vec!("2".into()), true, true)
         );
 
         args = vec!["fnq".into(), "sleep".into()];
         assert_eq!(
             parse_args(args),
-            ParseResult::Queue("sleep".into(), vec!(), false, false)
+            ParseResult::Queue("fnq".into(), "sleep".into(), vec!(), false, false)
         );
 
         args = vec!["fnq".into(), "--tap".into()];

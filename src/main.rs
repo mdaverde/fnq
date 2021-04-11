@@ -100,8 +100,8 @@ fn main() {
                 }
             }
         },
-        ParseResult::Queue(task_cmd, task_args, quiet, clean) => {
-            if let Err(err) = ops::queue(task_cmd, task_args, dir_path, quiet, clean) {
+        ParseResult::Queue(fnd_cmd, task_cmd, task_args, quiet, clean) => {
+            if let Err(err) = ops::queue(fnd_cmd, task_cmd, task_args, dir_path, quiet, clean) {
                 // Note: possibly could be another process in which this writes to a different stdout
                 eprintln!("Error: {:?}", err)
             }

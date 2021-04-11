@@ -37,7 +37,7 @@ check 'fails with no arguments' ! $FNQ
 check 'succeeds enqueueing true' 'f=$($FNQ true)'
 sleep 1
 check 'generated a lockfile' test -f $f
-# check 'lockfile contains exec line' grep -q exec.*nq.*true $f
+check 'lockfile contains exec line' grep -q exec.*fnq.*true $f
 check 'lockfile contains status line' grep -q exited.*status.*0 $f
 check 'lockfile is not executable' ! test -x $f
 )
@@ -54,7 +54,7 @@ setup
   check 'can kill running job' kill ${f2##*.}
   sleep 1
   check 'killed job is not executable anymore' ! test -x $f2
-  # check 'killed job contains status line' grep -q killed.*signal.*15 $f2
+  check 'killed job contains status line' grep -q killed.*signal.*SIGTERM $f2
 )
 teardown
 

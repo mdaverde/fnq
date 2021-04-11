@@ -57,6 +57,7 @@ impl TaskFileHandler {
 }
 
 pub fn queue(
+    fnd_cmd: ffi::OsString,
     task_cmd: ffi::OsString,
     task_args: Vec<ffi::OsString>,
     queue_dir: path::PathBuf,
@@ -123,7 +124,7 @@ pub fn queue(
                             }
                         }
                         Ok(sys::wait::WaitStatus::Signaled(_, signal, _)) => {
-                            writeln!(task_file, "[received signal {}.]", signal).ok();
+                            writeln!(task_file, "[killed by signal: {}]", signal).ok();
                         }
                         Ok(unknown) => {
                             // TODO: test this
@@ -147,19 +148,19 @@ pub fn queue(
                         .write(true)
                         .mode(0o600)
                         .open(&task_file_path)?;
-                    // .expect(format!("Could not create task's queue file at {:?}", &task_file_path).as_str());
 
                     let task_file_descriptor = task_file.as_raw_fd();
 
                     fcntl::flock(task_file_descriptor, fcntl::FlockArg::LockExclusive)?;
 
-                    let cmd_str = task_handler.cmd.to_str().ok_or(OpsError::StringConv)?;
-                    let args_str = task_handler
+                    let fnq_cmd_str = fnd_cmd.to_str().ok_or(OpsError::StringConv)?;
+                    let task_cmd_str = task_handler.cmd.to_str().ok_or(OpsError::StringConv)?;
+                    let task_args_str = task_handler
                         .args
                         .iter()
                         .map(|arg| arg.to_str().ok_or(OpsError::StringConv))
                         .collect::<Result<Vec<&str>, OpsError>>()?;
-                    writeln!(task_file, "exec {} {}", cmd_str, args_str.join(" "))?;
+                    writeln!(task_file, "exec {} {} {}", fnq_cmd_str, task_cmd_str, task_args_str.join(" "))?;
 
                     unistd::dup2(task_file_descriptor, io::stdout().as_raw_fd())?;
                     unistd::dup2(task_file_descriptor, io::stderr().as_raw_fd())?;
