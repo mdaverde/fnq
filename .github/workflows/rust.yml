@@ -2,7 +2,7 @@ name: build
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, dev ]
   pull_request:
     branches: [ main ]
 
@@ -20,3 +20,5 @@ jobs:
       run: cargo build --verbose
     - name: Run cargo tests
       run: cargo test --verbose
+    - name: Run tests.sh
+      run: ./tests.sh
