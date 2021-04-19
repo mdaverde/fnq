@@ -6,6 +6,8 @@
 	<br>
 </div>
 
+![build workflow](https://github.com/mdaverde/fnq/actions/workflows/rust.yml/badge.svg)
+
 ## Usage
 
 Set `FNQ_DIR` in your env to dictate where to store queue files. Defaults to `$(pwd)`
