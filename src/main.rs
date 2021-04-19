@@ -8,7 +8,8 @@ static USAGE: &'static str = "fnq - A flock-based approach to queuing Unix tasks
 USAGE:
     fnq [FLAGS] <command>
     fnq --tap <queue file>
-    fnq --wait <queue file>
+    fnq --block <queue file>
+    fnq --watch <queue file>
 
 FLAGS:
     -c, --clean       Removes queue file after process complete
