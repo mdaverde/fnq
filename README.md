@@ -11,7 +11,7 @@
 Set `FNQ_DIR` in your env to dictate where to store queue files. Defaults to `$(pwd)`
 
 ```shell
-$ FNQ_DIR=/tmp/fnq fnq [--quiet | --clean] cmd
+$ fnq [--quiet | --clean] cmd
 ```
 
 Protip: since `fnq` uses `FNQ_DIR` to determine queue state, you can create an entirely new queue by changing `FNQ_DIR`
@@ -27,7 +27,7 @@ $ fnq -q ./task3
 $ ls $FNQ_DIR
 fnq1617220638670.52957  fnq1617221011799.53621  fnq1617221184552.54371
 $ fnq --tap fnq1617221011799.53621 # Will check if task is running
-$ fnq --wait # Will block until last task finishes
+$ fnq --block # Will block until last task finishes
 ```
 
 ### Flags
@@ -42,13 +42,17 @@ No stdout
 
 Deletes queue file in `$FNQ_DIR` after task completes
 
-#### `--wait / -w <queuefile.pid>`
+#### `--block / -b <queuefile.pid>`
 
-Accepts a queue output file to wait for, otherwise blocks and waits for entire queue to finish
+Accepts a queue output file to wait for, otherwise waits/blocks for entire queue to finish
 
 #### `--tap / -t <queuefile.pid>`
 
 Accepts a queue output file to determine if running, otherwise determines success based if entire queue if finished
+
+#### `--watch / -w <queuefile.pid>`
+
+Similar to `--block` but will print to stdout contents of the currently running queue files
 
 ## Install
 
