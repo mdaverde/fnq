@@ -106,7 +106,7 @@ fn main() {
                 // Note: possibly could be another process in which this writes to a different stdout
                 eprintln!("Error: {:?}", err)
             }
-        },
+        }
         ParseResult::Watch => {
             if let Err(err) = ops::watch(dir_path) {
                 eprintln!("Error: {:?}", err)

@@ -23,7 +23,7 @@ pub fn parse_args(mut args: Vec<ffi::OsString>) -> ParseResult {
     } else if arg == "--version" || arg == "-v" {
         return ParseResult::Version;
     } else if arg == "--watch" || arg == "-w" {
-        return ParseResult::Watch
+        return ParseResult::Watch;
     } else if arg == "--tap" || arg == "-t" {
         return if len == 2 {
             ParseResult::Tap(None)
@@ -105,10 +105,16 @@ mod tests {
         assert_eq!(parse_args(args), ParseResult::Block(None));
 
         args = vec!["fnq".into(), "--block".into(), "queue_file.pid".into()];
-        assert_eq!(parse_args(args), ParseResult::Block(Some("queue_file.pid".into())));
+        assert_eq!(
+            parse_args(args),
+            ParseResult::Block(Some("queue_file.pid".into()))
+        );
 
         args = vec!["fnq".into(), "-b".into(), "queue_file.pid".into()];
-        assert_eq!(parse_args(args), ParseResult::Block(Some("queue_file.pid".into())));
+        assert_eq!(
+            parse_args(args),
+            ParseResult::Block(Some("queue_file.pid".into()))
+        );
 
         args = vec!["fnq".into(), "--quiet".into(), "sleep".into(), "2".into()];
         assert_eq!(
@@ -176,15 +182,39 @@ mod tests {
             ParseResult::Tap(Some("queue_file.pid".into()))
         );
 
-        assert_eq!(parse_args(vec!["fnq".into(), "--version".into()]), ParseResult::Version);
-        assert_eq!(parse_args(vec!["fnq".into(), "-v".into()]), ParseResult::Version);
-        assert_eq!(parse_args(vec!["fnq".into(), "-v".into(), "somethingelse".into()]), ParseResult::Version);
+        assert_eq!(
+            parse_args(vec!["fnq".into(), "--version".into()]),
+            ParseResult::Version
+        );
+        assert_eq!(
+            parse_args(vec!["fnq".into(), "-v".into()]),
+            ParseResult::Version
+        );
+        assert_eq!(
+            parse_args(vec!["fnq".into(), "-v".into(), "somethingelse".into()]),
+            ParseResult::Version
+        );
 
-        assert_eq!(parse_args(vec!["fnq".into(), "--help".into()]), ParseResult::Help);
-        assert_eq!(parse_args(vec!["fnq".into(), "-h".into()]), ParseResult::Help);
-        assert_eq!(parse_args(vec!["fnq".into(), "-h".into(), "somethingelse".into()]), ParseResult::Help);
+        assert_eq!(
+            parse_args(vec!["fnq".into(), "--help".into()]),
+            ParseResult::Help
+        );
+        assert_eq!(
+            parse_args(vec!["fnq".into(), "-h".into()]),
+            ParseResult::Help
+        );
+        assert_eq!(
+            parse_args(vec!["fnq".into(), "-h".into(), "somethingelse".into()]),
+            ParseResult::Help
+        );
 
-        assert_eq!(parse_args(vec!["fnq".into(), "--watch".into()]), ParseResult::Watch);
-        assert_eq!(parse_args(vec!["fnq".into(), "-w".into()]), ParseResult::Watch);
+        assert_eq!(
+            parse_args(vec!["fnq".into(), "--watch".into()]),
+            ParseResult::Watch
+        );
+        assert_eq!(
+            parse_args(vec!["fnq".into(), "-w".into()]),
+            ParseResult::Watch
+        );
     }
 }

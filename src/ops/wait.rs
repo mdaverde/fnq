@@ -1,6 +1,6 @@
 use std::path;
 
-use crate::ops::{files, block_on_locked_file, OpsError};
+use crate::ops::{block_on_locked_file, files, OpsError};
 
 pub fn block(queue_dir: path::PathBuf, queue_file: Option<path::PathBuf>) -> Result<(), OpsError> {
     let queue_files = files::files(&queue_dir)?;

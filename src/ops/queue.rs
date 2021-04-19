@@ -1,10 +1,10 @@
-use std::{env, ffi, fs, io, path, process, time};
 use std::io::Write;
 use std::os::unix::prelude::*;
+use std::{env, ffi, fs, io, path, process, time};
 
 use nix::{errno, fcntl, sys, unistd};
 
-use crate::ops::{files, block_on_locked_file, OpsError, QUEUE_FILE_PREFIX};
+use crate::ops::{block_on_locked_file, files, OpsError, QUEUE_FILE_PREFIX};
 
 struct TaskFileHandler {
     pub queue_dir: path::PathBuf,
@@ -113,18 +113,18 @@ pub fn queue(
                     match child_status {
                         Err(err) => {
                             // TODO: test this
-                            writeln!(task_file, "[child process has errored out: {}.]", err).ok();
+                            writeln!(task_file, "[child process has errored out: {}.]", err)?;
                         }
                         Ok(sys::wait::WaitStatus::Exited(_, exit_code)) => {
-                            writeln!(task_file, "[exited with status {}.]", exit_code).ok();
+                            writeln!(task_file, "[exited with status {}.]", exit_code)?;
                             if clean && exit_code == 0 {
                                 if let Err(err) = fs::remove_file(task_handler.path()) {
-                                    writeln!(task_file, "[failed to remove file: {}.]", err).ok();
+                                    writeln!(task_file, "[failed to remove file: {}.]", err)?;
                                 }
                             }
                         }
                         Ok(sys::wait::WaitStatus::Signaled(_, signal, _)) => {
-                            writeln!(task_file, "[killed by signal: {}]", signal).ok();
+                            writeln!(task_file, "[killed by signal: {}]", signal)?;
                         }
                         Ok(unknown) => {
                             // TODO: test this
@@ -132,10 +132,11 @@ pub fn queue(
                                 task_file,
                                 "[child process has exited with unknown state: {:?}]",
                                 unknown
-                            )
-                            .ok();
+                            )?;
                         }
-                    }
+                    };
+
+                    task_file.sync_all()?;
                 }
                 unistd::ForkResult::Child => {
                     unistd::close(pipe.1)?;
@@ -160,7 +161,13 @@ pub fn queue(
                         .iter()
                         .map(|arg| arg.to_str().ok_or(OpsError::StringConv))
                         .collect::<Result<Vec<&str>, OpsError>>()?;
-                    writeln!(task_file, "exec {} {} {}", fnq_cmd_str, task_cmd_str, task_args_str.join(" "))?;
+                    writeln!(
+                        task_file,
+                        "exec {} {} {}",
+                        fnq_cmd_str,
+                        task_cmd_str,
+                        task_args_str.join(" ")
+                    )?;
 
                     unistd::dup2(task_file_descriptor, io::stdout().as_raw_fd())?;
                     unistd::dup2(task_file_descriptor, io::stderr().as_raw_fd())?;

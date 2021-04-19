@@ -35,8 +35,7 @@ pub fn watch(queue_dir: path::PathBuf) -> Result<(), OpsError> {
 
                 let (tx, rx) = channel();
                 let mut watcher = raw_watcher(tx)?;
-                watcher
-                    .watch(&entry.filepath, RecursiveMode::NonRecursive)?;
+                watcher.watch(&entry.filepath, RecursiveMode::NonRecursive)?;
 
                 // We have to wait for 2 close events: the child process with the exclusive flock and
                 // the parent that determines exit status both have a file handle that closes
@@ -55,6 +54,7 @@ pub fn watch(queue_dir: path::PathBuf) -> Result<(), OpsError> {
                             Op::CLOSE_WRITE => {
                                 io::copy(&mut queue_file, &mut io::stdout())?;
                                 close_count = close_count + 1;
+                                queue_file.sync_all()?;
                             }
                             Op::RENAME => {
                                 return Err(OpsError::Unknown(
@@ -63,8 +63,15 @@ pub fn watch(queue_dir: path::PathBuf) -> Result<(), OpsError> {
                             }
                             _ => {}
                         },
-                        Ok(event) => return Err(OpsError::WatcherUnknown(format!("Broken event: {:?}", event))),
-                        Err(e) => return Err(OpsError::WatcherUnknown(format!("Watch error: {:?}", e))),
+                        Ok(event) => {
+                            return Err(OpsError::WatcherUnknown(format!(
+                                "Broken event: {:?}",
+                                event
+                            )))
+                        }
+                        Err(e) => {
+                            return Err(OpsError::WatcherUnknown(format!("Watch error: {:?}", e)))
+                        }
                     };
                 }
             }

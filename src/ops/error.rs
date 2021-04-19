@@ -1,4 +1,4 @@
-use std::fmt::{Formatter};
+use std::fmt::Formatter;
 use std::{error, ffi, fmt, io, time};
 
 #[derive(Debug)]
