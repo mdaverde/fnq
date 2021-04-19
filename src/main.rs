@@ -91,12 +91,12 @@ fn main() {
                 }
             }
         },
-        ParseResult::Wait(queue_file) => match get_queue_path(&dir_path, queue_file) {
+        ParseResult::Block(queue_file) => match get_queue_path(&dir_path, queue_file) {
             Err(err) => {
                 eprintln!("{}", err);
             }
             Ok(queue_path) => {
-                if let Err(err) = ops::wait(dir_path, queue_path) {
+                if let Err(err) = ops::block(dir_path, queue_path) {
                     eprintln!("Error {:?}", err);
                 }
             }

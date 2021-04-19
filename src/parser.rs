@@ -4,7 +4,7 @@ use std::ffi;
 pub enum ParseResult {
     Error,
     Tap(Option<ffi::OsString>),
-    Wait(Option<ffi::OsString>),
+    Block(Option<ffi::OsString>),
     Queue(ffi::OsString, ffi::OsString, Vec<ffi::OsString>, bool, bool),
     Watch,
     Help,
@@ -22,7 +22,7 @@ pub fn parse_args(mut args: Vec<ffi::OsString>) -> ParseResult {
         return ParseResult::Help;
     } else if arg == "--version" || arg == "-v" {
         return ParseResult::Version;
-    } else if arg == "--watch" {
+    } else if arg == "--watch" || arg == "-w" {
         return ParseResult::Watch
     } else if arg == "--tap" || arg == "-t" {
         return if len == 2 {
@@ -32,11 +32,11 @@ pub fn parse_args(mut args: Vec<ffi::OsString>) -> ParseResult {
         } else {
             ParseResult::Error
         };
-    } else if arg == "--wait" || arg == "-w" {
+    } else if arg == "--block" || arg == "-b" {
         return if len == 2 {
-            ParseResult::Wait(None)
+            ParseResult::Block(None)
         } else if len == 3 {
-            ParseResult::Wait(args.drain(2..3).next())
+            ParseResult::Block(args.drain(2..3).next())
         } else {
             ParseResult::Error
         };
@@ -97,6 +97,18 @@ mod tests {
 
         args = vec!["fnq".into(), "-c".into()];
         assert_eq!(parse_args(args), ParseResult::Error);
+
+        args = vec!["fnq".into(), "--block".into()];
+        assert_eq!(parse_args(args), ParseResult::Block(None));
+
+        args = vec!["fnq".into(), "-b".into()];
+        assert_eq!(parse_args(args), ParseResult::Block(None));
+
+        args = vec!["fnq".into(), "--block".into(), "queue_file.pid".into()];
+        assert_eq!(parse_args(args), ParseResult::Block(Some("queue_file.pid".into())));
+
+        args = vec!["fnq".into(), "-b".into(), "queue_file.pid".into()];
+        assert_eq!(parse_args(args), ParseResult::Block(Some("queue_file.pid".into())));
 
         args = vec!["fnq".into(), "--quiet".into(), "sleep".into(), "2".into()];
         assert_eq!(
@@ -173,5 +185,6 @@ mod tests {
         assert_eq!(parse_args(vec!["fnq".into(), "-h".into(), "somethingelse".into()]), ParseResult::Help);
 
         assert_eq!(parse_args(vec!["fnq".into(), "--watch".into()]), ParseResult::Watch);
+        assert_eq!(parse_args(vec!["fnq".into(), "-w".into()]), ParseResult::Watch);
     }
 }

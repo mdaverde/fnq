@@ -1,7 +1,7 @@
 pub use error::OpsError;
 pub use queue::queue;
 pub use tap::tap;
-pub use wait::wait;
+pub use wait::block;
 pub use watch::watch;
 
 use nix::fcntl;
@@ -23,7 +23,7 @@ fn open_file(path_buf: &path::PathBuf) -> Result<fs::File, io::Error> {
     fs::OpenOptions::new().read(true).write(true).open(path_buf)
 }
 
-fn lock_on_blocked_file(path_buf: &path::PathBuf) -> Result<(), OpsError> {
+fn block_on_locked_file(path_buf: &path::PathBuf) -> Result<(), OpsError> {
     // File handler needs to be alive for the scope of file descriptor
     let stay_alive = open_file(path_buf)?;
     let fd: RawFd = stay_alive.as_raw_fd();

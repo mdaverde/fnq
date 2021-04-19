@@ -4,7 +4,7 @@ use std::os::unix::prelude::*;
 
 use nix::{errno, fcntl, sys, unistd};
 
-use crate::ops::{files, lock_on_blocked_file, OpsError, QUEUE_FILE_PREFIX};
+use crate::ops::{files, block_on_locked_file, OpsError, QUEUE_FILE_PREFIX};
 
 struct TaskFileHandler {
     pub queue_dir: path::PathBuf,
@@ -171,7 +171,7 @@ pub fn queue(
                             continue;
                         }
 
-                        lock_on_blocked_file(&entry.filepath)?;
+                        block_on_locked_file(&entry.filepath)?;
                     }
 
                     writeln!(task_file, "")?;

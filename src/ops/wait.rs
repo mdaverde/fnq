@@ -1,8 +1,8 @@
 use std::path;
 
-use crate::ops::{files, lock_on_blocked_file, OpsError};
+use crate::ops::{files, block_on_locked_file, OpsError};
 
-pub fn wait(queue_dir: path::PathBuf, queue_file: Option<path::PathBuf>) -> Result<(), OpsError> {
+pub fn block(queue_dir: path::PathBuf, queue_file: Option<path::PathBuf>) -> Result<(), OpsError> {
     let queue_files = files::files(&queue_dir)?;
     if let Some(queue_file) = queue_file {
         match queue_files
@@ -16,12 +16,12 @@ pub fn wait(queue_dir: path::PathBuf, queue_file: Option<path::PathBuf>) -> Resu
                 )))
             }
             Some(entry) => {
-                lock_on_blocked_file(&entry.filepath)?;
+                block_on_locked_file(&entry.filepath)?;
             }
         }
     } else {
         for entry in queue_files {
-            lock_on_blocked_file(&entry.filepath)?;
+            block_on_locked_file(&entry.filepath)?;
         }
     }
 
