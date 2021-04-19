@@ -1,7 +1,7 @@
 <div align="center">
 	<h1>fnq (pronounced FUNK)</h1>
 	<p>
-		A flock-based approach to queuing Unix tasks & processes
+		Single CLI for a flock-based approach to queuing Unix tasks & processes
 	</p>
 	<br>
 </div>
@@ -19,6 +19,7 @@ Protip: since `fnq` uses `FNQ_DIR` to determine queue state, you can create an e
 ### Example
 
 ```shell
+$ export FNQ_DIR=~/.fnqdir # Can put in .bashrc for global use
 $ fnq ./task1 # Can also look in PATH
 fnq1617220638670.52957
 $ fnq ./task2 taskarg1 taskarg2 # Queues future tasks

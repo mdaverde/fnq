@@ -64,7 +64,7 @@ pub fn watch(queue_dir: path::PathBuf) -> Result<(), OpsError> {
                             _ => {}
                         },
                         Ok(event) => return Err(OpsError::WatcherUnknown(format!("Broken event: {:?}", event))),
-                        Err(e) => return Err(OpsError::WatcherUnknown(format!("watch error: {:?}", e))),
+                        Err(e) => return Err(OpsError::WatcherUnknown(format!("Watch error: {:?}", e))),
                     };
                 }
             }
