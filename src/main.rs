@@ -11,14 +11,16 @@ USAGE:
     fnq --wait <queue file>
 
 FLAGS:
-    -c, --clean     Removes queue file after process complete
-    -q, --quiet     No print out of queue file to stdout
-    -t, --tap       Determines if queue file's process is complete. If no
-                    queue file specified, then checks all in FNQ_DIR
-    -w, --wait      Will block if queue file's process is not complete. If no
-                    queue file specified, then blocks on all in FNQ_DIR
-    -v, --version   Prints version information
-    -h, --help      Prints help information
+    -c, --clean       Removes queue file after process complete
+    -q, --quiet       No print out of queue file to stdout
+    -t, --tap         Determines if queue file's process is complete. If no
+                      queue file specified, then checks all in FNQ_DIR
+    -b, --block       Will block if queue file's process is not complete. If no
+                      queue file specified, then blocks on all in FNQ_DIR
+    -w, --watch       Similar to --block but will print to stdout contents of the
+                      currently running queue files
+    -v, --version     Prints version information
+    -h, --help        Prints help information
 ";
 
 static VERSION: &'static str = env!("CARGO_PKG_VERSION");
@@ -58,7 +60,6 @@ fn main() {
     use parser::ParseResult;
 
     let args = env::args_os().collect();
-    // TODO: should use absolute directory?
     let fnq_dir = env::var_os("FNQ_DIR").unwrap_or(ffi::OsString::from("."));
     let dir_path = ensure_dir(fnq_dir);
     match parser::parse_args(args) {
@@ -103,6 +104,11 @@ fn main() {
         ParseResult::Queue(fnd_cmd, task_cmd, task_args, quiet, clean) => {
             if let Err(err) = ops::queue(fnd_cmd, task_cmd, task_args, dir_path, quiet, clean) {
                 // Note: possibly could be another process in which this writes to a different stdout
+                eprintln!("Error: {:?}", err)
+            }
+        },
+        ParseResult::Watch => {
+            if let Err(err) = ops::watch(dir_path) {
                 eprintln!("Error: {:?}", err)
             }
         }

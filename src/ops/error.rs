@@ -1,16 +1,16 @@
-use std::fmt::Formatter;
+use std::fmt::{Formatter};
 use std::{error, ffi, fmt, io, time};
 
-// Idea: what if we used a trait object instead of an enum?
-// What would this look like?
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum OpsError {
     StringConv,
     IO(io::Error),
-    Unix(String), // ??
+    Unix(String),
     SystemTime(time::SystemTimeError),
     Unknown(String),
+    Watcher(notify::Error),
+    WatcherUnknown(String),
 }
 
 impl fmt::Display for OpsError {
@@ -21,6 +21,8 @@ impl fmt::Display for OpsError {
             OpsError::Unix(nix_err) => nix_err.fmt(f),
             OpsError::SystemTime(sys_time_err) => sys_time_err.fmt(f),
             OpsError::Unknown(str_err) => write!(f, "Unknown error: {}", str_err),
+            OpsError::Watcher(notify_err) => notify_err.fmt(f),
+            OpsError::WatcherUnknown(str_err) => write!(f, "Unknown error(watcher): {}", str_err),
         }
     }
 }
@@ -48,5 +50,11 @@ impl From<time::SystemTimeError> for OpsError {
 impl From<ffi::NulError> for OpsError {
     fn from(_: ffi::NulError) -> Self {
         OpsError::StringConv
+    }
+}
+
+impl From<notify::Error> for OpsError {
+    fn from(err: notify::Error) -> Self {
+        OpsError::Watcher(err)
     }
 }

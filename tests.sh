@@ -45,7 +45,7 @@ teardown
 
 setup
 (
-  printf '# queue tests \n'
+  printf '\n# queue tests \n'
   check 'enqueueing true' f1=$($FNQ true)
   check 'enqueueing sleep 500' f2=$($FNQ sleep 500)
   check 'first job is done already' $FNQ --tap $f1
@@ -61,7 +61,7 @@ teardown
 
 setup
 (
-printf "# env tests\n"
+printf "\n# env tests\n"
 check 'enqueueing env' f1=$($FNQ env)
 $FNQ --wait
 check 'FNQJOBID is set' grep -q FNQJOBID=$f1 $f1
@@ -70,7 +70,7 @@ teardown
 
 setup
 (
-printf '# killing tests\n'
+printf '\n# killing tests\n'
 check 'spawning four jobs' 'f1=$($FNQ sleep 100)'
 check 'spawning four jobs' 'f2=$($FNQ sleep 1)'
 check 'spawning four jobs' 'f3=$($FNQ sleep 100)'
@@ -83,4 +83,23 @@ check 'fourth job is running' ! $FNQ --tap $f4
 check 'all jobs are done' $FNQ --wait
 )
 teardown
+
+setup
+(
+printf '\n# --watch tests\n'
+check 'spawning four jobs' 'f1=$($FNQ sleep 100)'
+check 'spawning four jobs' 'f2=$($FNQ echo two)'
+check 'spawning four jobs' 'f3=$($FNQ sleep 300)'
+check 'spawning four jobs' 'f4=$($FNQ sleep 400)'
+check '--watch tracks first job' '($FNQ --watch fnq* & p=$!; sleep 1; kill $p) | sed 3q | grep -q sleep.*100'
+check 'killing first job' kill ${f1##*.}
+check 'killing fourth job' kill ${f4##*.}
+sleep 1
+check '--watch tracks third job' '($FNQ --watch fnq* & p=$!; sleep 1; kill $p) | sed 3q | grep -q sleep.*300'
+check 'killing third job' kill ${f3##*.}
+sleep 1
+# check '--watch outputs last job when no job running' '$FNQ --watch fnq* | sed 3q | grep -q sleep.*400'
+)
+teardown
+
 

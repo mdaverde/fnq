@@ -6,6 +6,7 @@ pub enum ParseResult {
     Tap(Option<ffi::OsString>),
     Wait(Option<ffi::OsString>),
     Queue(ffi::OsString, ffi::OsString, Vec<ffi::OsString>, bool, bool),
+    Watch,
     Help,
     Version,
 }
@@ -21,6 +22,8 @@ pub fn parse_args(mut args: Vec<ffi::OsString>) -> ParseResult {
         return ParseResult::Help;
     } else if arg == "--version" || arg == "-v" {
         return ParseResult::Version;
+    } else if arg == "--watch" {
+        return ParseResult::Watch
     } else if arg == "--tap" || arg == "-t" {
         return if len == 2 {
             ParseResult::Tap(None)
@@ -168,5 +171,7 @@ mod tests {
         assert_eq!(parse_args(vec!["fnq".into(), "--help".into()]), ParseResult::Help);
         assert_eq!(parse_args(vec!["fnq".into(), "-h".into()]), ParseResult::Help);
         assert_eq!(parse_args(vec!["fnq".into(), "-h".into(), "somethingelse".into()]), ParseResult::Help);
+
+        assert_eq!(parse_args(vec!["fnq".into(), "--watch".into()]), ParseResult::Watch);
     }
 }
