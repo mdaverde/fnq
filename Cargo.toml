@@ -8,7 +8,8 @@ repository = "https://github.com/mdaverde/fnq"
 license = "MIT"
 readme = "README.md"
 description = "A flock-based approach to queuing Unix tasks & processes"
-
+categories = ["command-line-utilities"]
+keywords = ["cli", "task", "queue", "flock", "unix", "linux"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
