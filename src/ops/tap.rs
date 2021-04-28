@@ -15,10 +15,7 @@ pub fn tap(queue_dir: &path::PathBuf, queue_file: Option<path::PathBuf>) -> Resu
 
         match entry {
             None => {
-                return Err(OpsError::Unknown(format!(
-                    "Could not find {:?} file",
-                    queue_file
-                )))
+                return Err(OpsError::FileNotFound(queue_file.into()))
             }
             Some(entry) => {
                 let opened_file = open_file(&entry.filepath)?;

@@ -10,10 +10,7 @@ pub fn block(queue_dir: path::PathBuf, queue_file: Option<path::PathBuf>) -> Res
             .find(|entry| entry.filepath.eq(&queue_file))
         {
             None => {
-                return Err(OpsError::Unknown(format!(
-                    "Could not find {:?} file",
-                    queue_file
-                )))
+                return Err(OpsError::FileNotFound(queue_file.into()))
             }
             Some(entry) => {
                 block_on_locked_file(&entry.filepath)?;

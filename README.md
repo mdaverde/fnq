@@ -72,7 +72,7 @@ $ cargo install fnq
 After git cloning this repo, you can install as a cargo crate through
 
 ```shell
-$ cargo install --path path_to_repo
+$ cargo install --path path/to/repo
 ```
 
 This should make `fnq` available everywhere assuming your cargo crates are in `$PATH`
@@ -87,7 +87,5 @@ Currently tested on linux x86_64 during development
 
 ## License
 
-MIT
-
-Maintained by [Milan](https://mdaverde.com)
+MIT - Maintained by [Milan](https://mdaverde.com)
 

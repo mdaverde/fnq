@@ -3,6 +3,7 @@ pub use queue::queue;
 pub use tap::tap;
 pub use wait::block;
 pub use watch::watch;
+pub use last::last;
 
 use nix::fcntl;
 use std::os::unix::prelude::*;
@@ -16,6 +17,7 @@ mod queue;
 mod tap;
 mod wait;
 mod watch;
+mod last;
 
 pub const QUEUE_FILE_PREFIX: &'static str = "fnq";
 

@@ -20,6 +20,7 @@ FLAGS:
                       queue file specified, then blocks on all in FNQ_DIR
     -w, --watch       Similar to --block but will print to stdout contents of the
                       currently running queue files
+    -l, --last        Prints out last queue file
     -v, --version     Prints version information
     -h, --help        Prints help information
 ";
@@ -110,6 +111,11 @@ fn main() {
         }
         ParseResult::Watch => {
             if let Err(err) = ops::watch(dir_path) {
+                eprintln!("Error: {:?}", err)
+            }
+        }
+        ParseResult::Last => {
+            if let Err(err)  = ops::last(dir_path) {
                 eprintln!("Error: {:?}", err)
             }
         }
