@@ -1,6 +1,7 @@
 use std::ffi;
 use std::os::unix::prelude::*;
 
+// TODO: should count amount of $elem and use with capacity
 #[macro_export]
 macro_rules! concat_os_strings {
     ($($elem: expr),*) => {{
