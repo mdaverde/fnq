@@ -75,109 +75,115 @@ pub fn parse_args(mut args: Vec<ffi::OsString>) -> ParseResult {
 mod tests {
     use super::*;
 
+    macro_rules! vec_into {
+        ($($x:expr),+ $(,)?) => (
+            vec![$($x.into()),+]
+        );
+    }
+
     #[test]
     fn test_parse_args() {
         let mut args: Vec<ffi::OsString> = vec![];
         assert_eq!(parse_args(args), ParseResult::Error);
 
-        args = vec!["fnq".into()];
+        args = vec_into!["fnq"];
         assert_eq!(parse_args(args), ParseResult::Error);
 
-        args = vec!["fnq".into(), "--tap".into()];
+        args = vec_into!["fnq", "--tap"];
         assert_eq!(parse_args(args), ParseResult::Tap(None));
 
-        args = vec!["fnq".into(), "-t".into()];
+        args = vec_into!["fnq", "-t"];
         assert_eq!(parse_args(args), ParseResult::Tap(None));
 
-        args = vec!["fnq".into(), "--quiet".into()];
+        args = vec_into!["fnq", "--quiet"];
         assert_eq!(parse_args(args), ParseResult::Error);
 
-        args = vec!["fnq".into(), "-q".into()];
+        args = vec_into!["fnq", "-q"];
         assert_eq!(parse_args(args), ParseResult::Error);
 
-        args = vec!["fnq".into(), "--clean".into()];
+        args = vec_into!["fnq", "--clean"];
         assert_eq!(parse_args(args), ParseResult::Error);
 
-        args = vec!["fnq".into(), "-c".into()];
+        args = vec_into!["fnq", "-c"];
         assert_eq!(parse_args(args), ParseResult::Error);
 
-        args = vec!["fnq".into(), "--block".into()];
+        args = vec_into!["fnq", "--block"];
         assert_eq!(parse_args(args), ParseResult::Block(None));
 
-        args = vec!["fnq".into(), "-b".into()];
+        args = vec_into!["fnq", "-b"];
         assert_eq!(parse_args(args), ParseResult::Block(None));
 
-        args = vec!["fnq".into(), "--block".into(), "queue_file.pid".into()];
+        args = vec_into!["fnq", "--block", "queue_file.pid"];
         assert_eq!(
             parse_args(args),
             ParseResult::Block(Some("queue_file.pid".into()))
         );
 
-        args = vec!["fnq".into(), "-b".into(), "queue_file.pid".into()];
+        args = vec_into!["fnq", "-b", "queue_file.pid"];
         assert_eq!(
             parse_args(args),
             ParseResult::Block(Some("queue_file.pid".into()))
         );
 
-        args = vec!["fnq".into(), "--quiet".into(), "sleep".into(), "2".into()];
+        args = vec_into!["fnq", "--quiet", "sleep", "2"];
         assert_eq!(
             parse_args(args),
-            ParseResult::Queue("fnq".into(), "sleep".into(), vec!("2".into()), true, false)
+            ParseResult::Queue("fnq".into(), "sleep".into(), vec_into!["2"], true, false)
         );
-        args = vec!["fnq".into(), "-q".into(), "sleep".into(), "2".into()];
+        args = vec_into!["fnq", "-q", "sleep", "2"];
         assert_eq!(
             parse_args(args),
-            ParseResult::Queue("fnq".into(), "sleep".into(), vec!("2".into()), true, false)
-        );
-
-        args = vec!["fnq".into(), "--clean".into(), "sleep".into(), "2".into()];
-        assert_eq!(
-            parse_args(args),
-            ParseResult::Queue("fnq".into(), "sleep".into(), vec!("2".into()), false, true)
+            ParseResult::Queue("fnq".into(), "sleep".into(), vec_into!["2"], true, false)
         );
 
-        args = vec!["fnq".into(), "-c".into(), "sleep".into(), "2".into()];
+        args = vec_into!["fnq", "--clean", "sleep", "2"];
         assert_eq!(
             parse_args(args),
-            ParseResult::Queue("fnq".into(), "sleep".into(), vec!("2".into()), false, true)
+            ParseResult::Queue("fnq".into(), "sleep".into(), vec_into!["2"], false, true)
         );
 
-        args = vec![
-            "fnq".into(),
-            "--clean".into(),
-            "--quiet".into(),
-            "sleep".into(),
-            "2".into(),
+        args = vec_into!["fnq", "-c", "sleep", "2"];
+        assert_eq!(
+            parse_args(args),
+            ParseResult::Queue("fnq".into(), "sleep".into(), vec_into!["2"], false, true)
+        );
+
+        args = vec_into![
+            "fnq",
+            "--clean",
+            "--quiet",
+            "sleep",
+            "2",
         ];
         assert_eq!(
             parse_args(args),
-            ParseResult::Queue("fnq".into(), "sleep".into(), vec!("2".into()), true, true)
+            ParseResult::Queue("fnq".into(), "sleep".into(), vec_into!["2"], true, true)
         );
 
-        args = vec![
-            "fnq".into(),
-            "-c".into(),
-            "-q".into(),
-            "sleep".into(),
-            "2".into(),
+        args = vec_into![
+            "fnq",
+            "-c",
+            "-q",
+            "sleep",
+            "2",
         ];
         assert_eq!(
             parse_args(args),
-            ParseResult::Queue("fnq".into(), "sleep".into(), vec!("2".into()), true, true)
+            ParseResult::Queue("fnq".into(), "sleep".into(), vec_into!["2"], true, true)
         );
 
-        args = vec!["fnq".into(), "sleep".into()];
+        args = vec_into!["fnq", "sleep"];
         assert_eq!(
             parse_args(args),
             ParseResult::Queue("fnq".into(), "sleep".into(), vec!(), false, false)
         );
 
-        args = vec!["fnq".into(), "--tap".into()];
+        args = vec_into!["fnq", "--tap"];
         assert_eq!(parse_args(args), ParseResult::Tap(None));
 
-        args = vec![
-            "fnq".into(),
-            "--tap".into(),
+        args = vec_into![
+            "fnq",
+            "--tap",
             ffi::OsString::from("queue_file.pid"),
         ];
         assert_eq!(
@@ -186,46 +192,46 @@ mod tests {
         );
 
         assert_eq!(
-            parse_args(vec!["fnq".into(), "--version".into()]),
+            parse_args(vec_into!["fnq", "--version"]),
             ParseResult::Version
         );
         assert_eq!(
-            parse_args(vec!["fnq".into(), "-v".into()]),
+            parse_args(vec_into!["fnq", "-v"]),
             ParseResult::Version
         );
         assert_eq!(
-            parse_args(vec!["fnq".into(), "-v".into(), "somethingelse".into()]),
+            parse_args(vec_into!["fnq", "-v", "somethingelse"]),
             ParseResult::Version
         );
 
         assert_eq!(
-            parse_args(vec!["fnq".into(), "--help".into()]),
+            parse_args(vec_into!["fnq", "--help"]),
             ParseResult::Help
         );
         assert_eq!(
-            parse_args(vec!["fnq".into(), "-h".into()]),
+            parse_args(vec_into!["fnq", "-h"]),
             ParseResult::Help
         );
         assert_eq!(
-            parse_args(vec!["fnq".into(), "-h".into(), "somethingelse".into()]),
+            parse_args(vec_into!["fnq", "-h", "somethingelse"]),
             ParseResult::Help
         );
 
         assert_eq!(
-            parse_args(vec!["fnq".into(), "--watch".into()]),
+            parse_args(vec_into!["fnq", "--watch"]),
             ParseResult::Watch
         );
         assert_eq!(
-            parse_args(vec!["fnq".into(), "-w".into()]),
+            parse_args(vec_into!["fnq", "-w"]),
             ParseResult::Watch
         );
 
         assert_eq!(
-            parse_args(vec!["fnq".into(), "--last".into()]),
+            parse_args(vec_into!["fnq", "--last"]),
             ParseResult::Last
         );
         assert_eq!(
-            parse_args(vec!["fnq".into(), "-l".into()]),
+            parse_args(vec_into!["fnq", "-l"]),
             ParseResult::Last
         );
     }
